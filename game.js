@@ -937,7 +937,10 @@ function initGL() {
 function resizeGL() {
   if (!GL) return;
   const W = window.innerWidth, H = window.innerHeight;
-  GL.renderer.setSize(W, H, false);
+  // updateStyle=true: setzt auch style.width/height – ein Canvas ist ein
+  // replaced element und wird von CSS inset:0 NICHT gestreckt (wichtig
+  // bei Windows-Skalierung / devicePixelRatio > 1)
+  GL.renderer.setSize(W, H);
   GL.camera.aspect = W / H;
   // Abstand so, dass 1 Welteinheit = 1 CSS-Pixel auf der Tischebene
   GL.camera.position.set(0, 0, (H / 2) / Math.tan(GL.camera.fov / 2 * Math.PI / 180));
@@ -1012,16 +1015,17 @@ function makeWoodTexture() {
   const planks = [];
   let px0 = 0;
   while (px0 < W) {
-    let w = 130 + Math.random() * 100;
+    // WICHTIG: ganzzahlig – x0/w gehen in den Pixel-Index des ImageData
+    let w = Math.round(130 + Math.random() * 100);
     if (W - (px0 + w) < 90) w = W - px0;
     planks.push({
       x0: px0, w,
       tone: 0.84 + Math.random() * 0.32,            // Grundhelligkeit
-      freq: 0.045 + Math.random() * 0.05,           // Jahresring-Dichte
-      warp: 2.2 + Math.random() * 2.8,              // Faserverwerfung
+      freq: 0.014 + Math.random() * 0.016,          // breite Jahresringe (~33-70px)
+      warpAmp: 22 + Math.random() * 38,             // Verwerfung in PIXELN (vor freq)
       phase: Math.random() * 100,
-      ny: 6 + Math.floor(Math.random() * 8),        // ganzzahlige y-Perioden → nahtlos
-      knot: Math.random() < 0.55
+      ny: 4 + Math.floor(Math.random() * 5),        // ganzzahlige y-Perioden → nahtlos
+      knot: Math.random() < 0.7
         ? { u: 0.25 + Math.random() * 0.5, y: H * (0.25 + Math.random() * 0.5),
             r: 16 + Math.random() * 22 }
         : null
@@ -1034,8 +1038,11 @@ function makeWoodTexture() {
       const u = x - p.x0;
       for (let y = 0; y < H; y++) {
         const yn = y / H * p.ny; // periodische Rausch-Koordinate
-        // Jahresringe: quer zur Planke laufend, durch Rauschen verworfen
-        let v = u * p.freq + p.phase + fbm(u * 0.045 + p.phase, yn) * p.warp;
+        // Jahresringe: Position wird erst in Pixeln verworfen (sanfte,
+        // großflächige Wellen), dann in Ringe umgerechnet – so bleibt
+        // die Verwerfung immer kleiner als die Ringbreite
+        const wob = fbm(u / 170 + p.phase, yn);
+        let v = (u + p.warpAmp * wob) * p.freq + p.phase;
         // Astknoten: biegt die Ringe um sich herum und dunkelt ab
         let knotDark = 0;
         if (p.knot) {
@@ -1043,15 +1050,16 @@ function makeWoodTexture() {
           let dy = Math.abs(y - p.knot.y);
           dy = Math.min(dy, H - dy); // Torus-Abstand → nahtlos
           const dist = Math.sqrt(dx * dx + dy * dy * 0.35);
-          v += 55 / (dist + 14);
+          v += 40 / (dist + 16);
           knotDark = Math.max(0, 1 - dist / (p.knot.r * 2)) * 0.55;
         }
         const t = v - Math.floor(v);
         // asymmetrische Ringe: schmale dunkle Spätholz-Linie, breites Frühholz
-        const band = t < 0.22 ? t / 0.22 : 1 - (t - 0.22) / 0.78;
-        // feines Querrauschen (Faser)
-        const fine = (noise(u * 0.8, yn * 31) - 0.5) * 0.12;
-        let k = (0.30 + band * 0.62) * p.tone + fine - knotDark;
+        const band = t < 0.18 ? t / 0.18 : 1 - (t - 0.18) / 0.82;
+        // feine Faser (länglich in Plankenrichtung) + breite Längsstreifen
+        const fine = (noise(u * 0.3, yn * 47) - 0.5) * 0.10;
+        const streak = (noise(u * 0.08 + p.phase, yn * 2) - 0.5) * 0.18;
+        let k = (0.24 + band * 0.70) * p.tone + fine + streak - knotDark;
         k = Math.max(0, Math.min(1, k));
         const [r, gg, bb] = lerp3(k);
         const o = (y * W + x) * 4;
