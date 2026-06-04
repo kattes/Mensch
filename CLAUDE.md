@@ -14,7 +14,8 @@ Kein Build, kein Server, keine Abhängigkeiten — einfach `index.html` im Brows
 |---|---|
 | `index.html` | Seitengerüst: Holztisch (Body), Canvas-Spielbrett, 3D-Würfel, Hamburger-Menü, Overlays für Spielerauswahl und Spielende |
 | `style.css`  | Layout (Flexbox, responsive), Würfel-Optik mit CSS-Grid-Augen, Overlay-Dialoge |
-| `game.js`    | Gesamte Spiellogik, Rendering und KI (Vanilla JS, keine Frameworks) |
+| `game.js`    | Gesamte Spiellogik, Rendering und KI (Vanilla JS) |
+| `lib/three.min.js` | three.js r147 (UMD-Build, vendored) – nur für das Würfel-Rendering |
 | `Delphi/`    | Ursprüngliches, unvollendetes Delphi-Projekt (VCL). Diente als Vorlage für die Brettgeometrie. Wird nicht weiterentwickelt. |
 
 ## Architektur (`game.js`)
@@ -32,24 +33,33 @@ Kein Build, kein Server, keine Abhängigkeiten — einfach `index.html` im Brows
 - **Rendering**: Canvas, dauerhafte `requestAnimationFrame`-Schleife; `draw(t)` zeichnet den
   kompletten Zustand jedes Frame (Highlight-Pulsieren über Zeitparameter `t`); `frame(t)`
   liefert zusätzlich `dt` für Partikel- und Würfelphysik.
-- **Holztextur**: prozedural in `makeWoodTexture()`/`drawPlank()` erzeugt (dunkles
-  Walnussholz, nahtlose 1024er-Kachel: ganzzahlige Wellenperioden, Knoten nur im
-  Kachelinneren) und in `applyWood()` mit Lichtschein + Vignette als Body-Hintergrund
-  gesetzt; `style.css` enthält nur die Fallback-Grundfarbe.
+- **Holztextur**: prozedural per Pixel in `makeWoodTexture()` (dunkler Nussbaum,
+  nahtlose 1024er-Kachel): periodisches Wertrauschen + fBm verwirft Jahresringe
+  (asymmetrische Bänder), Astknoten biegen die Ringe (Torus-Abstand → nahtlos),
+  Planken mit eigenem Ton/Frequenz, Fugen mit Lichtkante. `applyWood()` setzt sie mit
+  Lichtschein + Vignette als Body-Hintergrund; `style.css` enthält nur die Fallback-Farbe.
 - **Tisch-Layout**: `layoutTable()` legt das
   Brett mit 20 px Einzug links (Querformat) bzw. oben (Hochformat); die restliche
   Holzfläche ist die Würfelzone (`diceZone`, Tisch-Pixel). Keine Statustexte — wer dran
   ist, zeigen das pulsierende Homebase-Feld und der Würfel-Glow in Spielerfarbe
   (`updateDiceCue()`). Hamburger-Menü (`#menuBtn`/`#menu`) für Neues Spiel, Protokoll
   (default eingeklappt) und später Sound.
-- **3D-Würfel**: CSS-3D-Cube (`#dice3d`/`.cube` mit 6 Faces), bewegt sich nur in der
-  `diceZone`, nie über dem Brett. Physik in `updateDice()`: Quaternion-Orientierung
-  (`dice.q`), Drehachse beim Rollen senkrecht zur Bewegungsrichtung (natürliches
-  Abrollen), lineare Gleitreibung, Hüpfen (`dice.z`/`vz`) bei Kick und Bandenkontakt.
-  Anstupsen (Tap) oder Schleudern (Drag-Flick) startet den Wurf. **Der Wurfwert wird aus
-  der tatsächlichen Endlage abgelesen** (`topFace()` = oben liegende Seite), dann dreht
-  `settleDice()` per Slerp sanft in die plane Lage (< 45°, kein Sprung) und ruft
-  `resolveRoll()` — Anzeige und Spielwert können daher nie voneinander abweichen.
+- **3D-Würfel**: bewegt sich nur in der `diceZone`, nie über dem Brett. Physik in
+  `updateDice()`: Quaternion-Orientierung (`dice.q`), Drehachse beim Rollen senkrecht
+  zur Bewegungsrichtung (natürliches Abrollen), lineare Gleitreibung, Hüpfen
+  (`dice.z`/`vz`) bei Kick und Bandenkontakt. Anstupsen (Tap) oder Schleudern
+  (Drag-Flick) startet den Wurf. **Der Wurfwert wird aus der tatsächlichen Endlage
+  abgelesen** (`topFace()` = oben liegende Seite), dann dreht `settleDice()` per Slerp
+  sanft in die plane Lage (< 45°, kein Sprung) und ruft `resolveRoll()` — Anzeige und
+  Spielwert können daher nie voneinander abweichen.
+- **Würfel-Rendering**: WebGL via three.js (`initGL`/`renderGL`, Vollbild-Canvas `#gl`,
+  transparent, pointer-events:none). Geometrie: `roundedBoxGeometry()` (unterteilte Box,
+  auf den Rounded-Box-Körper projiziert), 6 Materialien mit Canvas-Augen-Texturen
+  (`pipTexture`, Reihenfolge `[2,5,3,4,1,6]` für +x,-x,+y,-y,+z,-z). Kamera so, dass
+  1 Welteinheit = 1 CSS-Pixel auf Tischebene. **Frame-Spiegelung**: Bildschirm (y runter)
+  → three (y rauf): Position `(x−W/2, H/2−y, z)`, Quaternion `(w,x,y,z)→(w,−x,y,−z)`.
+  `#dice3d` bleibt unsichtbares Eingabe-Element; ohne WebGL dient sein CSS-Cube als
+  Fallback (`applyLighting()` läuft nur dann).
 - **Explosionen**: Partikelsystem (`particles`, `spawnExplosion()`) für geschlagene und
   bestrafte Figuren, gezeichnet in `drawParticles()`.
 - **Timer-Sicherheit**: `game.seq` wird bei „Neues Spiel" erhöht; `schedule()` entwertet damit

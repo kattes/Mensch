@@ -633,6 +633,7 @@ const LIGHT = (() => {
 })();
 
 function applyLighting() {
+  if (GL) return; // WebGL beleuchtet selbst; CSS-Würfel ist nur Fallback
   for (let v = 1; v <= 6; v++) {
     const n = qRotate(dice.q, FACE_NORMALS[v]);
     const d = n[0] * LIGHT[0] + n[1] * LIGHT[1] + n[2] * LIGHT[2];
@@ -831,87 +832,241 @@ document.addEventListener('keydown', e => {
 });
 
 // =========================================================
+//  WebGL-Würfel (three.js): echte Rounded-Box-Geometrie mit
+//  Licht und Antialiasing. Die Physik (dice.q, x/y/z) bleibt
+//  unverändert – hier wird nur gerendert. Ohne WebGL bleibt
+//  der CSS-Cube als Fallback aktiv.
+// =========================================================
+let GL = null;
+
+// Abgerundete Box: stark unterteilte BoxGeometry, deren Vertices auf
+// den Rounded-Box-Körper projiziert werden (Kern + Radius r).
+function roundedBoxGeometry(size, radiusFrac, segs) {
+  const r = size * radiusFrac;
+  const h = size / 2 - r;
+  const geo = new THREE.BoxGeometry(size, size, size, segs, segs, segs);
+  const pos = geo.attributes.position, nor = geo.attributes.normal;
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+    const cx = Math.max(-h, Math.min(h, x));
+    const cy = Math.max(-h, Math.min(h, y));
+    const cz = Math.max(-h, Math.min(h, z));
+    let dx = x - cx, dy = y - cy, dz = z - cz;
+    const l = Math.hypot(dx, dy, dz) || 1;
+    dx /= l; dy /= l; dz /= l;
+    pos.setXYZ(i, cx + dx * r, cy + dy * r, cz + dz * r);
+    nor.setXYZ(i, dx, dy, dz);
+  }
+  return geo;
+}
+
+// Augen-Textur einer Würfelseite (mit Mulden-Optik)
+function pipTexture(v) {
+  const S = 256;
+  const c = document.createElement('canvas');
+  c.width = S; c.height = S;
+  const g = c.getContext('2d');
+  const bg = g.createRadialGradient(S * 0.35, S * 0.3, S * 0.1, S * 0.5, S * 0.5, S * 0.85);
+  bg.addColorStop(0, '#ffffff');
+  bg.addColorStop(1, '#e9e7dc');
+  g.fillStyle = bg;
+  g.fillRect(0, 0, S, S);
+  const pad = S * 0.16, cell = (S - 2 * pad) / 3, R = S * 0.066;
+  for (const i of PIPS[v]) {
+    const cx = pad + (i % 3 + 0.5) * cell;
+    const cy = pad + (Math.floor(i / 3) + 0.5) * cell;
+    // Schattenkante oben links der Mulde
+    g.strokeStyle = 'rgba(0,0,0,0.30)';
+    g.lineWidth = S * 0.012;
+    g.beginPath(); g.arc(cx - R * 0.04, cy - R * 0.04, R * 1.04, Math.PI * 0.95, Math.PI * 1.75); g.stroke();
+    // Lichtkante unten rechts
+    g.strokeStyle = 'rgba(255,255,255,0.7)';
+    g.beginPath(); g.arc(cx + R * 0.04, cy + R * 0.04, R * 1.04, Math.PI * 0.05, Math.PI * 0.65); g.stroke();
+    // Mulde selbst
+    const grad = g.createRadialGradient(cx - R * 0.3, cy - R * 0.3, R * 0.05, cx, cy, R);
+    grad.addColorStop(0, '#000000');
+    grad.addColorStop(0.7, '#181818');
+    grad.addColorStop(1, '#383838');
+    g.fillStyle = grad;
+    g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2); g.fill();
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.encoding = THREE.sRGBEncoding;
+  tex.anisotropy = 4;
+  return tex;
+}
+
+function initGL() {
+  if (typeof THREE === 'undefined') return;
+  try {
+    const renderer = new THREE.WebGLRenderer({
+      canvas: document.getElementById('gl'),
+      alpha: true, antialias: true
+    });
+    renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+    renderer.outputEncoding = THREE.sRGBEncoding;
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(30, 1, 50, 6000);
+
+    scene.add(new THREE.AmbientLight(0xfff6e8, 0.55));
+    const sun = new THREE.DirectionalLight(0xfff2dd, 1.05);
+    sun.position.set(-350, 500, 790); // wie LIGHT, y in three nach oben
+    scene.add(sun);
+    const fill = new THREE.DirectionalLight(0xcfe2ff, 0.25);
+    fill.position.set(400, -250, 500);
+    scene.add(fill);
+
+    // Material-Reihenfolge der BoxGeometry: +x,-x,+y,-y,+z,-z
+    // Körpernormalen (three-Frame, y gespiegelt): 2:+x 5:-x 3:+y 4:-y 1:+z 6:-z
+    const mats = [2, 5, 3, 4, 1, 6].map(v => new THREE.MeshStandardMaterial({
+      map: pipTexture(v), roughness: 0.30, metalness: 0.04
+    }));
+    const mesh = new THREE.Mesh(roundedBoxGeometry(1, 0.13, 8), mats);
+    mesh.visible = false;
+    scene.add(mesh);
+
+    GL = { renderer, scene, camera, mesh };
+    cubeEl.style.display = 'none'; // CSS-Würfel nur noch als Fallback
+    resizeGL();
+  } catch (e) {
+    GL = null; // CSS-Fallback bleibt aktiv
+  }
+}
+
+function resizeGL() {
+  if (!GL) return;
+  const W = window.innerWidth, H = window.innerHeight;
+  GL.renderer.setSize(W, H, false);
+  GL.camera.aspect = W / H;
+  // Abstand so, dass 1 Welteinheit = 1 CSS-Pixel auf der Tischebene
+  GL.camera.position.set(0, 0, (H / 2) / Math.tan(GL.camera.fov / 2 * Math.PI / 180));
+  GL.camera.updateProjectionMatrix();
+}
+
+function renderGL() {
+  if (!GL) return;
+  const show = game.phase !== 'setup' && !diceEl.classList.contains('hidden');
+  GL.mesh.visible = show;
+  if (show) {
+    const W = window.innerWidth, H = window.innerHeight;
+    GL.mesh.position.set(dice.x - W / 2, H / 2 - dice.y, dice.z);
+    // Spiegelung Bildschirm-Frame (y nach unten) -> three-Frame (y nach oben):
+    // q = (w,x,y,z) -> (w,-x,y,-z)
+    GL.mesh.quaternion.set(-dice.q[1], dice.q[2], -dice.q[3], dice.q[0]);
+    GL.mesh.scale.setScalar(ds);
+  }
+  GL.renderer.render(GL.scene, GL.camera);
+}
+
+// =========================================================
 //  Prozedurale Holztextur: dunkles Walnussholz mit Planken,
 //  welliger Maserung, Farbbändern, Astknoten und Fugen.
 //  Die Kachel ist nahtlos (ganzzahlige Wellenperioden).
 // =========================================================
-function drawPlank(g, x0, w, H) {
-  // Grundton der Planke (jede etwas anders)
-  const tone = 0.85 + Math.random() * 0.3;
-  const r = Math.round(56 * tone), gr = Math.round(36 * tone), b = Math.round(19 * tone);
-  g.fillStyle = `rgb(${r},${gr},${b})`;
-  g.fillRect(x0, 0, w, H);
-
-  // Niederfrequente Farbbänder längs der Faser
-  for (let i = 0; i < 6; i++) {
-    const bx = x0 + Math.random() * w, bw = 8 + Math.random() * 30;
-    const light = Math.random() < 0.45;
-    const grad = g.createLinearGradient(bx - bw, 0, bx + bw, 0);
-    const col = light ? '255,205,140' : '12,6,2';
-    grad.addColorStop(0, `rgba(${col},0)`);
-    grad.addColorStop(0.5, `rgba(${col},${0.04 + Math.random() * 0.05})`);
-    grad.addColorStop(1, `rgba(${col},0)`);
-    g.fillStyle = grad;
-    g.fillRect(bx - bw, 0, bw * 2, H);
-  }
-
-  // Wellige Maserlinien, vertikal durchgehend
-  const lines = Math.floor(w / 3);
-  for (let i = 0; i < lines; i++) {
-    const lx = x0 + 6 + Math.random() * (w - 12);
-    const amp = 1 + Math.random() * 3.5;
-    const k = 1 + Math.floor(Math.random() * 3);       // ganze Perioden → kachelbar
-    const ph = Math.random() * Math.PI * 2;
-    const dark = Math.random() < 0.72;
-    g.strokeStyle = dark
-      ? `rgba(10,5,2,${0.08 + Math.random() * 0.12})`
-      : `rgba(255,210,150,${0.04 + Math.random() * 0.05})`;
-    g.lineWidth = 0.6 + Math.random() * 1.6;
-    g.beginPath();
-    for (let y = 0; y <= H; y += 8) {
-      const t = y / H * Math.PI * 2;
-      const wx = lx + amp * Math.sin(t * k + ph) + amp * 0.5 * Math.sin(t * k * 3 + ph * 2);
-      if (y === 0) g.moveTo(wx, y); else g.lineTo(wx, y);
-    }
-    g.stroke();
-  }
-
-  // Gelegentlich ein Astknoten (mit Jahresringen)
-  if (Math.random() < 0.5) {
-    const kx = x0 + w * 0.3 + Math.random() * w * 0.4;
-    const ky = 80 + Math.random() * (H - 160);
-    const kr = 5 + Math.random() * 9;
-    for (let i = 5; i >= 1; i--) {
-      g.strokeStyle = `rgba(12,6,2,${0.05 + 0.035 * i})`;
-      g.lineWidth = 1.2;
-      g.beginPath();
-      g.ellipse(kx, ky, kr * i / 3, kr * i / 3 * 1.7, 0, 0, Math.PI * 2);
-      g.stroke();
-    }
-    g.fillStyle = 'rgba(16,8,3,0.55)';
-    g.beginPath();
-    g.ellipse(kx, ky, kr * 0.45, kr * 0.75, 0, 0, Math.PI * 2);
-    g.fill();
-  }
-
-  // Fuge mit Lichtkante
-  g.fillStyle = 'rgba(6,3,1,0.85)';
-  g.fillRect(x0 + w - 2, 0, 2, H);
-  g.fillStyle = 'rgba(255,210,150,0.06)';
-  g.fillRect(x0, 0, 1.5, H);
-}
-
 function makeWoodTexture() {
   const W = 1024, H = 1024;
   const c = document.createElement('canvas');
   c.width = W; c.height = H;
   const g = c.getContext('2d');
-  let x = 0;
-  while (x < W) {
-    let w = 120 + Math.random() * 90;
-    if (W - (x + w) < 70) w = W - x;   // letzte Planke schließt die Kachel
-    drawPlank(g, x, w, H);
-    x += w;
+  const img = g.createImageData(W, H);
+  const data = img.data;
+
+  // Periodisches Wertrauschen (Gitter P x P) → nahtlose Kachel
+  const P = 64;
+  const lat = new Float32Array(P * P);
+  for (let i = 0; i < lat.length; i++) lat[i] = Math.random();
+  const noise = (x, y) => {
+    const xi = Math.floor(x), yi = Math.floor(y);
+    const xf = x - xi, yf = y - yi;
+    const sx = xf * xf * (3 - 2 * xf), sy = yf * yf * (3 - 2 * yf);
+    const ix0 = ((xi % P) + P) % P, iy0 = ((yi % P) + P) % P;
+    const ix1 = (ix0 + 1) % P, iy1 = (iy0 + 1) % P;
+    const a = lat[iy0 * P + ix0], b = lat[iy0 * P + ix1];
+    const d = lat[iy1 * P + ix0], e = lat[iy1 * P + ix1];
+    return a + (b - a) * sx + (d - a) * sy + (a - b - d + e) * sx * sy;
+  };
+  const fbm = (x, y) =>
+    noise(x, y) * 0.55 + noise(x * 2.13, y * 2.13) * 0.28 + noise(x * 4.7, y * 4.7) * 0.17;
+
+  // Drei Farbtöne: dunkler Nussbaum
+  const DARK = [36, 22, 11], MID = [72, 45, 23], LIGHT = [104, 69, 36];
+  const lerp3 = (k) => {
+    // k 0..1 → dunkel..hell über Mittelton
+    let r, gg, bb;
+    if (k < 0.6) {
+      const s = k / 0.6;
+      r = DARK[0] + (MID[0] - DARK[0]) * s;
+      gg = DARK[1] + (MID[1] - DARK[1]) * s;
+      bb = DARK[2] + (MID[2] - DARK[2]) * s;
+    } else {
+      const s = Math.min(1, (k - 0.6) / 0.4);
+      r = MID[0] + (LIGHT[0] - MID[0]) * s;
+      gg = MID[1] + (LIGHT[1] - MID[1]) * s;
+      bb = MID[2] + (LIGHT[2] - MID[2]) * s;
+    }
+    return [r, gg, bb];
+  };
+
+  // Planken einteilen
+  const planks = [];
+  let px0 = 0;
+  while (px0 < W) {
+    let w = 130 + Math.random() * 100;
+    if (W - (px0 + w) < 90) w = W - px0;
+    planks.push({
+      x0: px0, w,
+      tone: 0.84 + Math.random() * 0.32,            // Grundhelligkeit
+      freq: 0.045 + Math.random() * 0.05,           // Jahresring-Dichte
+      warp: 2.2 + Math.random() * 2.8,              // Faserverwerfung
+      phase: Math.random() * 100,
+      ny: 6 + Math.floor(Math.random() * 8),        // ganzzahlige y-Perioden → nahtlos
+      knot: Math.random() < 0.55
+        ? { u: 0.25 + Math.random() * 0.5, y: H * (0.25 + Math.random() * 0.5),
+            r: 16 + Math.random() * 22 }
+        : null
+    });
+    px0 += w;
+  }
+
+  for (const p of planks) {
+    for (let x = p.x0; x < p.x0 + p.w; x++) {
+      const u = x - p.x0;
+      for (let y = 0; y < H; y++) {
+        const yn = y / H * p.ny; // periodische Rausch-Koordinate
+        // Jahresringe: quer zur Planke laufend, durch Rauschen verworfen
+        let v = u * p.freq + p.phase + fbm(u * 0.045 + p.phase, yn) * p.warp;
+        // Astknoten: biegt die Ringe um sich herum und dunkelt ab
+        let knotDark = 0;
+        if (p.knot) {
+          const dx = u - p.knot.u * p.w;
+          let dy = Math.abs(y - p.knot.y);
+          dy = Math.min(dy, H - dy); // Torus-Abstand → nahtlos
+          const dist = Math.sqrt(dx * dx + dy * dy * 0.35);
+          v += 55 / (dist + 14);
+          knotDark = Math.max(0, 1 - dist / (p.knot.r * 2)) * 0.55;
+        }
+        const t = v - Math.floor(v);
+        // asymmetrische Ringe: schmale dunkle Spätholz-Linie, breites Frühholz
+        const band = t < 0.22 ? t / 0.22 : 1 - (t - 0.22) / 0.78;
+        // feines Querrauschen (Faser)
+        const fine = (noise(u * 0.8, yn * 31) - 0.5) * 0.12;
+        let k = (0.30 + band * 0.62) * p.tone + fine - knotDark;
+        k = Math.max(0, Math.min(1, k));
+        const [r, gg, bb] = lerp3(k);
+        const o = (y * W + x) * 4;
+        data[o] = r; data[o + 1] = gg; data[o + 2] = bb; data[o + 3] = 255;
+      }
+    }
+  }
+  g.putImageData(img, 0, 0);
+
+  // Fugen mit Lichtkante
+  for (const p of planks) {
+    g.fillStyle = 'rgba(4,2,1,0.85)';
+    g.fillRect(p.x0 + p.w - 2, 0, 2, H);
+    g.fillStyle = 'rgba(255,215,160,0.06)';
+    g.fillRect(p.x0, 0, 1.5, H);
   }
   return c.toDataURL('image/png');
 }
@@ -971,6 +1126,7 @@ function layoutTable() {
   }
 
   clampDiceToZone();
+  resizeGL();
 }
 
 function unit() { return canvas.width / 12; }
@@ -1123,6 +1279,7 @@ function frame(t) {
   lastT = t;
   updateParticles(dt);
   updateDice(dt);
+  renderGL();
   draw(t);
   requestAnimationFrame(frame);
 }
@@ -1292,6 +1449,7 @@ document.getElementById('btnAgain').addEventListener('click', showSetup);
 applyWood();
 buildSetup();
 buildCube();
+initGL();
 layoutTable();
 placeDiceInZone();
 cubeEl.style.transform = qToCss(dice.q);

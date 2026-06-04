@@ -14,11 +14,14 @@
 <canvas id="board"></canvas>
 
 <!-- 3D-Würfel, rollt nur auf der Holzfläche.
+     Gezeichnet wird er per WebGL (#gl, three.js); der CSS-Cube in
+     #dice3d dient nur noch als Fallback ohne WebGL. #dice3d bleibt
+     immer das (unsichtbare) Eingabe-Element für Stups und Wurf.
      Glow (wer ist dran) und Bodenschatten liegen als eigene Ebenen
-     UNTER dem Würfel auf dem Tisch – kein drop-shadow-Filter, der
-     durch die abgerundeten Ecken schwarz durchscheinen könnte. -->
+     unter dem Würfel auf dem Tisch. -->
 <div id="diceGlow" class="hidden"></div>
 <div id="diceShadow" class="hidden"></div>
+<canvas id="gl"></canvas>
 <div id="dice3d" class="hidden"><div class="cube" id="cube"></div></div>
 
 <!-- Hamburger-Menü -->
@@ -52,6 +55,7 @@
   </div>
 </div>
 
+<script src="lib/three.min.js"></script>
 <script src="game.js"></script>
 </body>
 </html>

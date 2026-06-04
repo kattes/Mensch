@@ -23,6 +23,14 @@ body {
   touch-action: manipulation;
 }
 
+/* ---------- WebGL-Ebene für den Würfel ---------- */
+#gl {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none; /* Eingaben gehen weiter an #dice3d */
+}
+
 /* ---------- 3D-Würfel ---------- */
 /* Wichtig: KEIN filter/drop-shadow auf #dice3d – der würde hinter die
    Flächen gemalt und schiene durch die abgerundeten Ecken schwarz durch. */
