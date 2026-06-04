@@ -857,7 +857,9 @@ function layoutTable() {
   ds = S / 12 * 1.35;
   // global setzen, damit auch Schatten und Leuchtring (Geschwister) sie sehen
   document.documentElement.style.setProperty('--ds', ds + 'px');
-  document.documentElement.style.setProperty('--inset', Math.max(1.5, ds * 0.022) + 'px');
+  // 45% des Eckradius (16% von ds): Kern-Ecken bleiben sicher innerhalb
+  // der Rundung der Außenflächen, auch unter Perspektive
+  document.documentElement.style.setProperty('--inset', Math.max(2, ds * 0.16 * 0.45) + 'px');
 
   if (landscape) diceZone = { x0: M + S + GAP, y0: M, x1: W - M, y1: H - M };
   else           diceZone = { x0: M, y0: M + S + GAP, x1: W - M, y1: H - M };

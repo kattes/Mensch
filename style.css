@@ -111,14 +111,17 @@ body {
   outline: 1px solid transparent; /* Anti-Aliasing-Hilfe für 3D-Kanten */
 }
 
-/* Innerer Kern: geschlossener, scharfkantiger Würfel knapp unter den
-   abgerundeten Außenflächen. Durch deren Ecklücken sieht man so weißes
-   Würfelmaterial statt der Tischplatte – der Würfel wirkt massiv. */
+/* Innerer Kern: geschlossener, scharfkantiger (= wasserdichter) Würfel
+   unter den abgerundeten Außenflächen. Die Einrückung beträgt 45% des
+   Eckradius – damit bleiben seine Ecken geometrisch immer INNERHALB der
+   runden Ecken der Außenflächen (nötig sind ~30%, Rest ist Reserve für
+   die Perspektive). Die Innenseiten bleiben sichtbar (kein
+   backface-visibility), sodass auch streifende Blicke durch die
+   Ecklücken auf weißes Material treffen. */
 .cube .iface {
   position: absolute;
-  inset: var(--inset, 2px);
+  inset: var(--inset, 4px);
   background: #f3f2ec;
-  backface-visibility: hidden;
   outline: 1px solid transparent; /* Anti-Aliasing-Hilfe für 3D-Kanten */
 }
 
