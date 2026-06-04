@@ -33,10 +33,45 @@ const HOME_POS = [
 ];
 
 const START = [0, 10, 20, 30];
-const NAMES = ['Rot', 'Grün', 'Gelb', 'Blau'];
-const HEX      = ['#d62828', '#2e933c', '#f2b705', '#1f6fd6'];
-const HEX_DARK = ['#8f1313', '#1c5c26', '#a87f02', '#114a92'];
-const HEX_LIGHT= ['#f6cdcd', '#cdeacf', '#fbeec0', '#cce0f6'];
+
+// ---------- Farbpalette ----------
+// Jeder Spielerplatz (Ecke) kann eine beliebige Palettenfarbe erhalten –
+// z. B. Schwarz statt Rot für Menschen mit Rot/Grün-Schwäche.
+// Hell-/Dunkelvarianten werden automatisch aus der Grundfarbe berechnet.
+const PALETTE = [
+  { name: 'Rot',     hex: '#d62828' },
+  { name: 'Grün',    hex: '#2e933c' },
+  { name: 'Gelb',    hex: '#f2b705' },
+  { name: 'Blau',    hex: '#1f6fd6' },
+  { name: 'Schwarz', hex: '#2f2f2f' },
+  { name: 'Violett', hex: '#8e44ad' },
+  { name: 'Orange',  hex: '#e8740c' },
+  { name: 'Türkis',  hex: '#0f9b8e' }
+];
+
+// Mischt zwei Hexfarben, t = Anteil der zweiten Farbe (0..1)
+function mixHex(a, b, t) {
+  const ah = parseInt(a.slice(1), 16), bh = parseInt(b.slice(1), 16);
+  let out = '#';
+  for (const sh of [16, 8, 0]) {
+    const v = Math.round(((ah >> sh) & 255) * (1 - t) + ((bh >> sh) & 255) * t);
+    out += v.toString(16).padStart(2, '0');
+  }
+  return out;
+}
+
+// Aktuelle Farbzuordnung: Palettenindex je Spielerplatz (0=oben links,
+// 1=oben rechts, 2=unten rechts, 3=unten links)
+const setupColors = [0, 1, 2, 3];
+let NAMES = [], HEX = [], HEX_DARK = [], HEX_LIGHT = [];
+
+function applyColors() {
+  NAMES     = setupColors.map(i => PALETTE[i].name);
+  HEX       = setupColors.map(i => PALETTE[i].hex);
+  HEX_DARK  = setupColors.map(i => mixHex(PALETTE[i].hex, '#000000', 0.4));
+  HEX_LIGHT = setupColors.map(i => mixHex(PALETTE[i].hex, '#ffffff', 0.78));
+}
+applyColors();
 
 const PIPS = { 1:[4], 2:[2,6], 3:[2,4,6], 4:[0,2,6,8], 5:[0,2,4,6,8], 6:[0,2,3,5,6,8] };
 
@@ -631,18 +666,58 @@ function buildSetup() {
   rows.innerHTML = '';
   const defaults = ['human', 'ki', 'off', 'off'];
   for (let q = 0; q < 4; q++) {
+    const block = document.createElement('div');
+    block.className = 'player-block';
+
     const row = document.createElement('div');
     row.className = 'player-row';
     row.innerHTML = `
-      <div class="swatch" style="background:${HEX[q]}"></div>
-      <div class="pname">${NAMES[q]}</div>
+      <div class="swatch" id="swatch${q}" style="background:${HEX[q]}"></div>
+      <div class="pname" id="pname${q}">${NAMES[q]}</div>
       <select id="ptype${q}">
         <option value="human">Mensch</option>
         <option value="ki">Computer</option>
         <option value="off">Nicht dabei</option>
       </select>`;
-    rows.appendChild(row);
+    block.appendChild(row);
     row.querySelector('select').value = defaults[q];
+
+    // Farbpalette für diesen Spielerplatz
+    const pal = document.createElement('div');
+    pal.className = 'palette';
+    pal.id = 'palette' + q;
+    PALETTE.forEach((c, ci) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'colorbtn';
+      b.style.background = c.hex;
+      b.title = c.name;
+      b.addEventListener('click', () => pickColor(q, ci));
+      pal.appendChild(b);
+    });
+    block.appendChild(pal);
+    rows.appendChild(block);
+  }
+  refreshSetupColors();
+}
+
+// Farbwahl: Ist die Farbe schon vergeben, tauschen die beiden Plätze –
+// so kann es nie Duplikate geben.
+function pickColor(q, ci) {
+  const other = setupColors.indexOf(ci);
+  if (other >= 0 && other !== q) setupColors[other] = setupColors[q];
+  setupColors[q] = ci;
+  applyColors();
+  refreshSetupColors();
+}
+
+function refreshSetupColors() {
+  for (let q = 0; q < 4; q++) {
+    document.getElementById('swatch' + q).style.background = HEX[q];
+    document.getElementById('pname' + q).textContent = NAMES[q];
+    const pal = document.getElementById('palette' + q);
+    Array.prototype.forEach.call(pal.children, (b, ci) =>
+      b.classList.toggle('sel', setupColors[q] === ci));
   }
 }
 

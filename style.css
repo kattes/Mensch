@@ -171,11 +171,18 @@ html, body {
 
 .dialog h2 { text-align: center; color: #ffd54f; }
 
+.player-block {
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+
+.player-block:last-child { border-bottom: none; }
+
 .player-row {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 6px 0;
+  padding: 2px 0;
 }
 
 .player-row .swatch {
@@ -185,7 +192,31 @@ html, body {
   flex-shrink: 0;
 }
 
-.player-row .pname { width: 60px; font-weight: 600; }
+.player-row .pname { width: 70px; font-weight: 600; }
+
+/* Farbpalette je Spielerplatz */
+.palette {
+  display: flex;
+  gap: 7px;
+  margin: 6px 0 2px 38px;
+}
+
+.colorbtn {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,.25);
+  cursor: pointer;
+  padding: 0;
+  transition: transform .1s;
+}
+
+.colorbtn:hover { transform: scale(1.2); }
+
+.colorbtn.sel {
+  border-color: #fff;
+  box-shadow: 0 0 0 2px rgba(255,255,255,.4);
+  transform: scale(1.2);
+}
 
 .player-row select {
   flex: 1;

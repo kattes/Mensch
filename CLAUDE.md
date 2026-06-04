@@ -22,7 +22,11 @@ Kein Build, kein Server, keine Abhängigkeiten — einfach `index.html` im Brows
 - **Brettgeometrie**: 12×12-Raster, übernommen aus dem Delphi-Original (`Main.pas`).
   `FIELD_POS` (40 Laufwegfelder), `GOAL_POS` (Zielfelder je Farbe), `HOME_POS` (Homebases in den Ecken).
 - **Positionscodierung einer Figur**: `-1` = Homebase, `0–39` = Spielfeld (absolut), `40–43` = Zielfeld 0–3.
-- **Farb-/Spielerindex**: 0 = Rot, 1 = Grün, 2 = Gelb, 3 = Blau. Startfelder: `START = [0, 10, 20, 30]`.
+- **Spielerindex = Ecke**: 0 = oben links, 1 = oben rechts, 2 = unten rechts, 3 = unten links.
+  Startfelder: `START = [0, 10, 20, 30]`. Die Farbe je Ecke ist im Setup frei aus `PALETTE`
+  wählbar (8 Farben, u. a. Schwarz statt Rot bei Rot/Grün-Schwäche); `NAMES`/`HEX`/`HEX_DARK`/
+  `HEX_LIGHT` werden in `applyColors()` daraus abgeleitet, Duplikate werden durch Farbtausch
+  zwischen den Plätzen verhindert (`pickColor()`).
 - **Zustand**: zentrales `game`-Objekt mit Phasenautomat
   `setup → roll → move → anim → (roll | nächster Spieler) → … → over`.
 - **Rendering**: Canvas, dauerhafte `requestAnimationFrame`-Schleife; `draw(t)` zeichnet den
