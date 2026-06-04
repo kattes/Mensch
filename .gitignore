@@ -1,0 +1,9 @@
+# Delphi-Build- und IDE-Artefakte
+Delphi/__history/
+Delphi/*.dcu
+Delphi/*.exe
+Delphi/*.identcache
+Delphi/*.dsk
+Delphi/*.~dsk
+Delphi/*.local
+Delphi/*.~*

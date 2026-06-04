@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mensch ärgere Dich nicht</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="app">
+  <div id="boardwrap">
+    <canvas id="board"></canvas>
+  </div>
+
+  <aside id="panel">
+    <h1>Mensch ärgere<br>Dich nicht</h1>
+    <div id="status">&nbsp;</div>
+    <div id="diceArea">
+      <div id="dice" class="dice" title="Würfeln"></div>
+      <div id="diceLabel">&nbsp;</div>
+    </div>
+    <div id="log"></div>
+    <button id="btnNew" class="btn">Neues Spiel</button>
+  </aside>
+</div>
+
+<!-- Spielerauswahl -->
+<div id="setup" class="overlay">
+  <div class="dialog">
+    <h2>Spieler wählen</h2>
+    <div id="playerRows"></div>
+    <p id="setupHint" class="hint">&nbsp;</p>
+    <button id="btnStart" class="btn primary">Spiel starten</button>
+  </div>
+</div>
+
+<!-- Spielende -->
+<div id="gameover" class="overlay hidden">
+  <div class="dialog">
+    <h2>Spiel beendet!</h2>
+    <div id="ranking"></div>
+    <button id="btnAgain" class="btn primary">Nochmal spielen</button>
+  </div>
+</div>
+
+<script src="game.js"></script>
+</body>
+</html>

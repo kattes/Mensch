@@ -1,0 +1,24 @@
+    XXG
+rr  X X  gg
+rr  X X  gg
+    X X
+RXXXX XXXXX
+X         X
+XXXXX XXXXY
+    X X
+bb  X X  yy
+bb  X X  yy
+    BXX
+
+
+    XXX
+    X X
+    X X
+    X X
+XXXXX XXXXX
+X         X
+XXXXX XXXXX
+    X X
+    X X
+    X X
+    XXX

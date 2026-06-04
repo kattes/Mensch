@@ -1,0 +1,62 @@
+object MainForm: TMainForm
+  Left = 0
+  Top = 0
+  BorderStyle = bsNone
+  Caption = 'MainForm'
+  ClientHeight = 391
+  ClientWidth = 589
+  Color = clSilver
+  Font.Charset = DEFAULT_CHARSET
+  Font.Color = clWindowText
+  Font.Height = -11
+  Font.Name = 'Tahoma'
+  Font.Style = []
+  OldCreateOrder = False
+  WindowState = wsMaximized
+  OnCreate = FormCreate
+  OnDblClick = FormDblClick
+  OnResize = FormResize
+  PixelsPerInch = 96
+  TextHeight = 13
+  object PaintBoxSpielbrett: TPaintBox
+    Left = 80
+    Top = 16
+    Width = 177
+    Height = 153
+    OnMouseDown = PaintBoxSpielbrettMouseDown
+    OnMouseMove = PaintBoxSpielbrettMouseMove
+    OnPaint = PaintBoxSpielbrettPaint
+  end
+  object Label1: TLabel
+    Left = 8
+    Top = 8
+    Width = 60
+    Height = 25
+    Caption = 'Label1'
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -21
+    Font.Name = 'Tahoma'
+    Font.Style = []
+    ParentFont = False
+  end
+  object Label2: TLabel
+    Left = 8
+    Top = 48
+    Width = 60
+    Height = 25
+    Caption = 'Label2'
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -21
+    Font.Name = 'Tahoma'
+    Font.Style = []
+    ParentFont = False
+  end
+  object Timer1: TTimer
+    Interval = 500
+    OnTimer = Timer1Timer
+    Left = 496
+    Top = 216
+  end
+end
