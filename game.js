@@ -637,8 +637,10 @@ function applyLighting() {
     const n = qRotate(dice.q, FACE_NORMALS[v]);
     const d = n[0] * LIGHT[0] + n[1] * LIGHT[1] + n[2] * LIGHT[2];
     const b = (0.62 + 0.5 * Math.max(0, d)).toFixed(3);
-    faceEls[v].style.filter = `brightness(${b})`;
-    ifaceEls[v].style.filter = `brightness(${b})`;
+    // Der minimale Blur glättet die Treppchen an den transformierten
+    // Kanten (Anti-Aliasing), ohne die Augen sichtbar weichzuzeichnen
+    faceEls[v].style.filter = `brightness(${b}) blur(0.3px)`;
+    ifaceEls[v].style.filter = `brightness(${b}) blur(0.6px)`;
   }
 }
 
