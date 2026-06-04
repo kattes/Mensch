@@ -19,17 +19,17 @@ const FIELD_POS = [
 ];
 
 const GOAL_POS = [
-  [[2,6],[3,6],[4,6],[5,6]],          // Rot   (Einlauf von Feld 39)
-  [[6,2],[6,3],[6,4],[6,5]],          // Grün  (Einlauf von Feld 9)
-  [[10,6],[9,6],[8,6],[7,6]],         // Gelb  (Einlauf von Feld 19)
-  [[6,10],[6,9],[6,8],[6,7]]          // Blau  (Einlauf von Feld 29)
+  [[2,6],[3,6],[4,6],[5,6]],          // oben links  (Einlauf von Feld 39)
+  [[6,2],[6,3],[6,4],[6,5]],          // oben rechts (Einlauf von Feld 9)
+  [[10,6],[9,6],[8,6],[7,6]],         // unten rechts(Einlauf von Feld 19)
+  [[6,10],[6,9],[6,8],[6,7]]          // unten links (Einlauf von Feld 29)
 ];
 
 const HOME_POS = [
-  [[1.4,1.4],[2.6,1.4],[1.4,2.6],[2.6,2.6]],     // Rot   oben links
-  [[9.4,1.4],[10.6,1.4],[9.4,2.6],[10.6,2.6]],   // Grün  oben rechts
-  [[9.4,9.4],[10.6,9.4],[9.4,10.6],[10.6,10.6]], // Gelb  unten rechts
-  [[1.4,9.4],[2.6,9.4],[1.4,10.6],[2.6,10.6]]    // Blau  unten links
+  [[1.4,1.4],[2.6,1.4],[1.4,2.6],[2.6,2.6]],     // oben links
+  [[9.4,1.4],[10.6,1.4],[9.4,2.6],[10.6,2.6]],   // oben rechts
+  [[9.4,9.4],[10.6,9.4],[9.4,10.6],[10.6,10.6]], // unten rechts
+  [[1.4,9.4],[2.6,9.4],[1.4,10.6],[2.6,10.6]]    // unten links
 ];
 
 const START = [0, 10, 20, 30];
@@ -84,18 +84,20 @@ const game = {
   rollsLeft: 1,
   phase: 'setup',   // setup | roll | move | anim | over
   movable: [],
+  captureList: [],  // Schlagzüge des aktuellen Wurfs (für die Strafregel)
   ranking: [],
   rolling: false,
   seq: 0            // entwertet alte Timer nach "Neues Spiel"
 };
 
 // ---------- DOM ----------
-const canvas    = document.getElementById('board');
-const ctx       = canvas.getContext('2d');
-const statusEl  = document.getElementById('status');
-const diceEl    = document.getElementById('dice');
-const diceLabel = document.getElementById('diceLabel');
-const logEl     = document.getElementById('log');
+const canvas  = document.getElementById('board');
+const ctx     = canvas.getContext('2d');
+const diceEl  = document.getElementById('dice3d');
+const cubeEl  = document.getElementById('cube');
+const logEl   = document.getElementById('log');
+const menuEl  = document.getElementById('menu');
+const menuBtn = document.getElementById('menuBtn');
 
 const logLines = [];
 
@@ -106,12 +108,6 @@ function schedule(fn, ms) {
   const s = game.seq;
   setTimeout(() => { if (s === game.seq) fn(); }, ms);
 }
-
-function nameSpan(pIdx) {
-  return `<span class="dot" style="background:${HEX[pIdx]}"></span><strong>${NAMES[pIdx]}</strong>`;
-}
-
-function setStatus(html) { statusEl.innerHTML = html; }
 
 function addLog(text) {
   logLines.unshift(text);
@@ -135,6 +131,10 @@ function opponentAt(pos, excludeIdx) {
     if (j >= 0) return { player: q, piece: j };
   }
   return null;
+}
+
+function isCaptureMove(pIdx, m) {
+  return m.to < 40 && !!opponentAt(m.to, pIdx);
 }
 
 // Im Zielfeld darf nicht übersprungen werden (klassische Regel)
@@ -221,70 +221,32 @@ function startTurn() {
   game.phase = 'roll';
   game.dice = null;
   game.movable = [];
+  game.captureList = [];
   game.rollsLeft = hasMovablePotential(game.current) ? 1 : 3;
-  renderDice(null);
-  updateStatus();
-  if (isKI(game.current)) schedule(rollDice, 900);
+  updateDiceCue();
+  if (isKI(game.current)) schedule(kickRandom, 900);
 }
 
-function updateStatus() {
-  const c = game.current;
-  if (game.phase === 'roll') {
-    if (isKI(c)) {
-      setStatus(`${nameSpan(c)} (Computer) würfelt …`);
-      diceEl.classList.remove('rollable');
-      diceLabel.textContent = ' ';
-    } else {
-      setStatus(`${nameSpan(c)} ist am Zug`);
-      diceEl.classList.add('rollable');
-      diceLabel.textContent = game.rollsLeft > 1
-        ? `Würfeln! (noch ${game.rollsLeft} Versuche)` : 'Würfeln!';
-    }
-  } else if (game.phase === 'move') {
-    diceEl.classList.remove('rollable');
-    if (isKI(c)) {
-      setStatus(`${nameSpan(c)} (Computer) überlegt …`);
-      diceLabel.textContent = ' ';
-    } else {
-      setStatus(`${nameSpan(c)} – Figur anklicken`);
-      diceLabel.textContent = `Gewürfelt: ${game.dice}`;
-    }
-  } else {
-    diceEl.classList.remove('rollable');
-    diceLabel.textContent = game.dice ? `Gewürfelt: ${game.dice}` : ' ';
-  }
-}
-
-function rollDice() {
-  if (game.phase !== 'roll' || game.rolling) return;
-  game.rolling = true;
+// Statt Statustexten: Der Würfel leuchtet in der Farbe des Spielers, der dran ist
+function updateDiceCue() {
   diceEl.classList.remove('rollable');
-
-  // kleine Würfelanimation
-  let ticks = 0;
-  const s = game.seq;
-  const iv = setInterval(() => {
-    if (s !== game.seq) { clearInterval(iv); return; }
-    renderDice(1 + Math.floor(Math.random() * 6));
-    if (++ticks >= 9) {
-      clearInterval(iv);
-      const w = 1 + Math.floor(Math.random() * 6);
-      renderDice(w);
-      game.rolling = false;
-      resolveRoll(w);
-    }
-  }, 65);
+  if (game.phase === 'roll' && !game.rolling &&
+      game.players.length && isHuman(game.current)) {
+    diceEl.style.setProperty('--glow', HEX[game.current]);
+    diceEl.classList.add('rollable');
+  }
 }
 
 function resolveRoll(w) {
   game.dice = w;
   const c = game.current;
   const moves = computeMoves(c, w);
+  game.captureList = moves.filter(m => isCaptureMove(c, m));
 
   if (moves.length) {
     game.phase = 'move';
     game.movable = moves;
-    updateStatus();
+    updateDiceCue();
     if (isKI(c)) {
       schedule(() => {
         const m = aiPickMove(moves, c);
@@ -300,20 +262,20 @@ function resolveRoll(w) {
     game.phase = 'roll';
     game.rollsLeft = 1;
     addLog(`${NAMES[c]} würfelt 6, kann aber nicht ziehen – nochmal!`);
-    updateStatus();
-    if (isKI(c)) schedule(rollDice, 800);
+    updateDiceCue();
+    if (isKI(c)) schedule(kickRandom, 800);
     return;
   }
 
   game.rollsLeft--;
   if (game.rollsLeft > 0) {
     game.phase = 'roll';
-    updateStatus();
-    if (isKI(c)) schedule(rollDice, 700);
+    updateDiceCue();
+    if (isKI(c)) schedule(kickRandom, 700);
   } else {
-    setStatus(`${nameSpan(c)} kann nicht ziehen`);
     addLog(`${NAMES[c]} kann nicht ziehen.`);
     game.phase = 'anim'; // Eingaben kurz sperren
+    updateDiceCue();
     schedule(advancePlayer, 1000);
   }
 }
@@ -341,7 +303,7 @@ function executeMove(m) {
   const path = makePath(c, m);
   game.phase = 'anim';
   game.movable = [];
-  updateStatus();
+  updateDiceCue();
 
   let idx = 0;
   const s = game.seq;
@@ -358,15 +320,32 @@ function executeMove(m) {
 function finalizeMove(m) {
   const c = game.current;
   const pos = game.players[c].pieces[m.piece];
+  let hasCaptured = false;
 
   // Schlagen
   if (pos < 40) {
     const hit = opponentAt(pos, c);
     if (hit) {
+      const [ex, ey] = FIELD_POS[pos];
+      spawnExplosion(ex, ey, HEX[hit.player]);
       game.players[hit.player].pieces[hit.piece] = -1;
       addLog(`💥 ${NAMES[c]} schlägt ${NAMES[hit.player]} – Mensch ärgere Dich nicht!`);
+      hasCaptured = true;
     }
   }
+
+  // Strafregel: Schlagen war möglich, wurde aber verschmäht →
+  // die säumige Figur fliegt selbst raus
+  if (!hasCaptured && game.captureList.length) {
+    const others = game.captureList.filter(cm => cm.piece !== m.piece);
+    const pun = (others.length ? others[0] : game.captureList[0]).piece;
+    const [px, py] = pieceXY(c, pun);
+    spawnExplosion(px, py, HEX[c]);
+    game.players[c].pieces[pun] = -1;
+    addLog(`⚖️ Strafe! ${NAMES[c]} hätte schlagen können – die säumige Figur fliegt raus!`);
+  }
+  game.captureList = [];
+
   if (m.type === 'out') addLog(`${NAMES[c]} bringt eine Figur ins Spiel.`);
   if (m.type === 'goal') addLog(`${NAMES[c]} zieht ins Ziel.`);
 
@@ -415,11 +394,11 @@ function advancePlayer() {
 
 function gameOver() {
   game.phase = 'over';
-  updateStatus();
-  setStatus('Spiel beendet!');
+  game.rolling = false;
+  updateDiceCue();
   const medals = ['🥇', '🥈', '🥉', '4.'];
   document.getElementById('ranking').innerHTML = game.ranking
-    .map((q, i) => `${medals[i]} <span class="dot" style="display:inline-block;width:.8em;height:.8em;border-radius:50%;background:${HEX[q]};border:2px solid rgba(255,255,255,.6)"></span> <strong>${NAMES[q]}</strong>${game.players[q].type === 'ki' ? ' (Computer)' : ''}`)
+    .map((q, i) => `${medals[i]} <span style="display:inline-block;width:.8em;height:.8em;border-radius:50%;background:${HEX[q]};border:2px solid rgba(255,255,255,.6)"></span> <strong>${NAMES[q]}</strong>${game.players[q].type === 'ki' ? ' (Computer)' : ''}`)
     .join('<br>');
   document.getElementById('gameover').classList.remove('hidden');
 }
@@ -448,8 +427,12 @@ function isDangerous(pIdx, abs) {
 }
 
 function aiPickMove(moves, pIdx) {
+  // Wegen der Strafregel: Wenn geschlagen werden kann, wird geschlagen
+  const caps = moves.filter(m => isCaptureMove(pIdx, m));
+  const pool = caps.length ? caps : moves;
+
   let best = null, bestScore = -Infinity;
-  for (const m of moves) {
+  for (const m of pool) {
     let s = 0;
     if (m.type === 'out')  s += 55;
     if (m.type === 'goal') s += 70 + (m.to - 40) * 2;
@@ -468,16 +451,378 @@ function aiPickMove(moves, pIdx) {
 }
 
 // =========================================================
-//  Zeichnen
+//  Explosionspartikel
 // =========================================================
-function resizeCanvas() {
-  const wrap = document.getElementById('boardwrap');
-  const size = Math.max(200, Math.min(wrap.clientWidth, wrap.clientHeight));
+const particles = [];
+
+function spawnExplosion(xu, yu, hex) {
+  for (let i = 0; i < 26; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const sp = 1.2 + Math.random() * 3.2;
+    particles.push({
+      x: xu, y: yu,
+      vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 0.6,
+      age: 0, life: 0.5 + Math.random() * 0.4,
+      r: 0.04 + Math.random() * 0.08,
+      color: i % 3 === 0 ? '#ffb300' : hex
+    });
+  }
+  // Druckwelle
+  particles.push({ ring: true, x: xu, y: yu, age: 0, life: 0.45 });
+}
+
+function updateParticles(dt) {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.age += dt;
+    if (p.age >= p.life) { particles.splice(i, 1); continue; }
+    if (!p.ring) {
+      p.vy += 2.6 * dt; // leichte Schwerkraft
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+    }
+  }
+}
+
+function drawParticles(u) {
+  for (const p of particles) {
+    const k = p.age / p.life;
+    if (p.ring) {
+      ctx.strokeStyle = `rgba(255,170,0,${0.85 * (1 - k)})`;
+      ctx.lineWidth = u * 0.09 * (1 - k) + 1;
+      circle(p.x * u, p.y * u, (0.15 + k * 1.15) * u);
+      ctx.stroke();
+    } else {
+      ctx.globalAlpha = 1 - k;
+      ctx.fillStyle = p.color;
+      circle(p.x * u, p.y * u, p.r * u * (1 - k * 0.5));
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+  }
+}
+
+// =========================================================
+//  Quaternionen (für die natürliche Würfelrotation)
+// =========================================================
+function qMul(a, b) {
+  return [
+    a[0]*b[0] - a[1]*b[1] - a[2]*b[2] - a[3]*b[3],
+    a[0]*b[1] + a[1]*b[0] + a[2]*b[3] - a[3]*b[2],
+    a[0]*b[2] - a[1]*b[3] + a[2]*b[0] + a[3]*b[1],
+    a[0]*b[3] + a[1]*b[2] - a[2]*b[1] + a[3]*b[0]
+  ];
+}
+
+function qAxis(x, y, z, ang) {
+  const s = Math.sin(ang / 2);
+  return [Math.cos(ang / 2), x * s, y * s, z * s];
+}
+
+function qNorm(q) {
+  const l = Math.hypot(q[0], q[1], q[2], q[3]) || 1;
+  return [q[0] / l, q[1] / l, q[2] / l, q[3] / l];
+}
+
+function qRotate(q, v) {
+  const [w, x, y, z] = q, [vx, vy, vz] = v;
+  const tx = 2 * (y * vz - z * vy);
+  const ty = 2 * (z * vx - x * vz);
+  const tz = 2 * (x * vy - y * vx);
+  return [
+    vx + w * tx + (y * tz - z * ty),
+    vy + w * ty + (z * tx - x * tz),
+    vz + w * tz + (x * ty - y * tx)
+  ];
+}
+
+function qSlerp(a, b, t) {
+  let dot = a[0]*b[0] + a[1]*b[1] + a[2]*b[2] + a[3]*b[3];
+  let bb = b;
+  if (dot < 0) { bb = b.map(v => -v); dot = -dot; }
+  if (dot > 0.9995) return qNorm(a.map((v, i) => v + (bb[i] - v) * t));
+  const th = Math.acos(Math.min(1, dot)), s = Math.sin(th);
+  const f1 = Math.sin((1 - t) * th) / s, f2 = Math.sin(t * th) / s;
+  return [a[0]*f1 + bb[0]*f2, a[1]*f1 + bb[1]*f2, a[2]*f1 + bb[2]*f2, a[3]*f1 + bb[3]*f2];
+}
+
+function qToCss(q) {
+  const [w, x, y, z] = q;
+  const s = Math.hypot(x, y, z);
+  if (s < 1e-9) return 'rotate3d(0,0,1,0rad)';
+  const ang = 2 * Math.atan2(s, w);
+  return `rotate3d(${x / s},${y / s},${z / s},${ang}rad)`;
+}
+
+// =========================================================
+//  3D-Würfel – rollt nur auf der Holzfläche neben dem Brett.
+//  Der Wert ergibt sich aus der tatsächlichen Endlage
+//  (oben liegende Seite), nie umgekehrt.
+// =========================================================
+
+// Lage der sechs Seiten am Würfelkörper (gegenüberliegende ergeben 7)
+const FACE_TF = {
+  1: 'rotateY(0deg)',  6: 'rotateY(180deg)',
+  2: 'rotateY(90deg)', 5: 'rotateY(-90deg)',
+  3: 'rotateX(90deg)', 4: 'rotateX(-90deg)'
+};
+
+// Außennormale jeder Seite im Körper-Koordinatensystem
+const FACE_NORMALS = {
+  1: [0, 0, 1], 6: [0, 0, -1],
+  2: [1, 0, 0], 5: [-1, 0, 0],
+  3: [0, -1, 0], 4: [0, 1, 0]
+};
+
+const dice = {
+  x: 0, y: 0,          // Mittelpunkt in Tisch-Pixeln
+  vx: 0, vy: 0,        // Geschwindigkeit (px/s)
+  z: 0, vz: 0,         // Sprunghöhe (px) für den Hüpf-Effekt
+  wz: 0,               // Drall um die Hochachse (rad/s)
+  q: qNorm(qMul(qAxis(1, 0, 0, -0.35), qAxis(0, 1, 0, 0.5))), // Orientierung
+  qFrom: null, qTo: null, settleT: 0,
+  state: 'idle',       // idle | tumble | settle
+  value: null
+};
+
+// Layout: wird in layoutTable() gesetzt
+let boardCss = 0;                                  // Kantenlänge Brett (CSS-px)
+let diceZone = { x0: 0, y0: 0, x1: 0, y1: 0 };     // Würfelzone (Tisch-px)
+let ds = 80;                                       // Würfelgröße (px)
+
+function cssU() { return boardCss / 12; }
+
+function buildCube() {
+  cubeEl.innerHTML = '';
+  for (let v = 1; v <= 6; v++) {
+    const f = document.createElement('div');
+    f.className = 'face';
+    f.style.transform = `${FACE_TF[v]} translateZ(calc(var(--ds, 80px) / 2))`;
+    for (let i = 0; i < 9; i++) {
+      const sp = document.createElement('span');
+      if (PIPS[v].includes(i)) sp.classList.add('on');
+      f.appendChild(sp);
+    }
+    cubeEl.appendChild(f);
+  }
+}
+
+// Welche Seite zeigt gerade nach oben (zum Betrachter)?
+function topFace(q) {
+  let best = 1, bestDot = -2;
+  for (let v = 1; v <= 6; v++) {
+    const n = qRotate(q, FACE_NORMALS[v]);
+    if (n[2] > bestDot) { bestDot = n[2]; best = v; }
+  }
+  return best;
+}
+
+function clampDiceToZone() {
+  const h = ds / 2 + 2;
+  dice.x = Math.min(diceZone.x1 - h, Math.max(diceZone.x0 + h, dice.x));
+  dice.y = Math.min(diceZone.y1 - h, Math.max(diceZone.y0 + h, dice.y));
+}
+
+function placeDiceInZone() {
+  dice.x = (diceZone.x0 + diceZone.x1) / 2;
+  dice.y = (diceZone.y0 + diceZone.y1) / 2;
+  clampDiceToZone();
+}
+
+function kickDice(vx, vy) {
+  if (game.phase !== 'roll' || game.rolling || dice.state !== 'idle') return;
+  game.rolling = true;
+  dice.vx = vx; dice.vy = vy;
+  dice.vz = 2.4 * cssU();                       // kleiner Wurf nach oben
+  dice.wz = (Math.random() * 2 - 1) * 4;        // etwas Drall
+  dice.state = 'tumble';
+  updateDiceCue();
+}
+
+// Stoß in Richtung eines zufälligen Punktes der Würfelzone
+function kickRandom() {
+  if (game.phase !== 'roll' || game.rolling || dice.state !== 'idle') return;
+  const tx = diceZone.x0 + ds + Math.random() * (diceZone.x1 - diceZone.x0 - 2 * ds);
+  const ty = diceZone.y0 + ds + Math.random() * (diceZone.y1 - diceZone.y0 - 2 * ds);
+  let dx = tx - dice.x, dy = ty - dice.y;
+  const len = Math.hypot(dx, dy) || 1;
+  const sp = (6 + Math.random() * 4.5) * cssU();
+  kickDice(dx / len * sp, dy / len * sp);
+}
+
+function settleDice() {
+  dice.state = 'settle';
+  dice.vx = 0; dice.vy = 0; dice.z = 0; dice.vz = 0;
+  dice.settleT = 0;
+  dice.value = topFace(dice.q);                 // Wert = tatsächliche Endlage!
+
+  // Kleine Korrekturdrehung, damit die Seite exakt plan liegt (< 45°)
+  const n = qRotate(dice.q, FACE_NORMALS[dice.value]);
+  const cx = n[1], cy = -n[0];                  // n × (0,0,1)
+  const s = Math.hypot(cx, cy);
+  const ang = Math.atan2(s, n[2]);
+  const A = s > 1e-6 ? qAxis(cx / s, cy / s, 0, ang) : [1, 0, 0, 0];
+  dice.qFrom = dice.q;
+  dice.qTo = qNorm(qMul(A, dice.q));
+}
+
+function updateDice(dt) {
+  if (game.phase === 'setup' || !boardCss) return;
+  const u = cssU();
+
+  if (dice.state === 'tumble') {
+    dice.x += dice.vx * dt;
+    dice.y += dice.vy * dt;
+
+    // Bande: Würfelzone (Tischfläche ohne Spielbrett)
+    const h = ds / 2 + 2, R = 0.72;
+    let bounced = false;
+    if (dice.x < diceZone.x0 + h) { dice.x = diceZone.x0 + h; dice.vx =  Math.abs(dice.vx) * R; bounced = true; }
+    if (dice.x > diceZone.x1 - h) { dice.x = diceZone.x1 - h; dice.vx = -Math.abs(dice.vx) * R; bounced = true; }
+    if (dice.y < diceZone.y0 + h) { dice.y = diceZone.y0 + h; dice.vy =  Math.abs(dice.vy) * R; bounced = true; }
+    if (dice.y > diceZone.y1 - h) { dice.y = diceZone.y1 - h; dice.vy = -Math.abs(dice.vy) * R; bounced = true; }
+
+    const speed = Math.hypot(dice.vx, dice.vy);
+
+    // Hüpfen: beim Anstoß und an der Bande springt der Würfel leicht auf
+    if (bounced) dice.vz = Math.max(dice.vz, Math.min(2.2 * u, speed * 0.25));
+    dice.z += dice.vz * dt;
+    dice.vz -= 14 * u * dt;                     // "Schwerkraft"
+    if (dice.z < 0) { dice.z = 0; dice.vz = -dice.vz * 0.42; if (Math.abs(dice.vz) < 0.3 * u) dice.vz = 0; }
+
+    // Gleitreibung: lineare Abbremsung wirkt natürlicher als exponentiell
+    const dec = 3.4 * u * dt;
+    if (speed > dec) {
+      const f = (speed - dec) / speed;
+      dice.vx *= f; dice.vy *= f;
+    } else { dice.vx = 0; dice.vy = 0; }
+
+    // Natürliches Abrollen: Drehachse senkrecht zur Bewegungsrichtung
+    if (speed > 1) {
+      const ang = (speed / (ds / 2)) * dt;      // Abrollwinkel
+      dice.q = qNorm(qMul(qAxis(-dice.vy / speed, dice.vx / speed, 0, ang), dice.q));
+    }
+    // Drall um die Hochachse
+    if (Math.abs(dice.wz) > 0.05) {
+      dice.q = qNorm(qMul(qAxis(0, 0, 1, dice.wz * dt), dice.q));
+      dice.wz *= Math.exp(-1.8 * dt);
+    }
+
+    cubeEl.style.transform = qToCss(dice.q);
+
+    if (speed < 0.5 * u && dice.z <= 0.01) settleDice();
+  }
+  else if (dice.state === 'settle') {
+    // Sanfte Korrekturdrehung in die plane Endlage – kein Sprung
+    dice.settleT += dt;
+    const k = Math.min(1, dice.settleT / 0.32);
+    const e = 1 - Math.pow(1 - k, 3);           // ease-out
+    dice.q = qSlerp(dice.qFrom, dice.qTo, e);
+    cubeEl.style.transform = qToCss(dice.q);
+    if (k >= 1) {
+      dice.q = dice.qTo;
+      dice.state = 'idle';
+      game.rolling = false;
+      resolveRoll(dice.value);
+    }
+  }
+
+  // Position und Sprunghöhe anwenden
+  const scale = 1 + dice.z / (1.6 * ds);
+  diceEl.style.transform =
+    `translate(${dice.x - ds / 2}px, ${dice.y - ds / 2}px) scale(${scale})`;
+}
+
+// ---- Würfel anstupsen / schleudern ----
+let diceDrag = null;
+
+diceEl.addEventListener('pointerdown', e => {
+  if (game.phase !== 'roll' || game.rolling || !isHuman(game.current)) return;
+  e.preventDefault();
+  try { diceEl.setPointerCapture(e.pointerId); } catch (_) { /* synthetische Events */ }
+  diceDrag = { x: e.clientX, y: e.clientY, t: performance.now(), vx: 0, vy: 0, moved: false };
+});
+
+diceEl.addEventListener('pointermove', e => {
+  if (!diceDrag) return;
+  const now = performance.now();
+  const dt = Math.max(8, now - diceDrag.t) / 1000;
+  const dx = e.clientX - diceDrag.x;
+  const dy = e.clientY - diceDrag.y;
+  if (Math.hypot(dx, dy) > 5) diceDrag.moved = true;
+  // Würfel folgt dem Finger (innerhalb der Zone)
+  dice.x += dx; dice.y += dy;
+  clampDiceToZone();
+  diceDrag.vx = 0.6 * diceDrag.vx + 0.4 * (dx / dt);
+  diceDrag.vy = 0.6 * diceDrag.vy + 0.4 * (dy / dt);
+  diceDrag.x = e.clientX; diceDrag.y = e.clientY; diceDrag.t = now;
+});
+
+function endDiceDrag() {
+  if (!diceDrag) return;
+  const d = diceDrag;
+  diceDrag = null;
+  const u = cssU();
+  if (!d.moved) { kickRandom(); return; }       // Anstupsen
+  const sp = Math.hypot(d.vx, d.vy);
+  if (sp < 2.5 * u) { kickRandom(); return; }   // zu schwacher Wurf
+  const cl = Math.min(13 * u, Math.max(5 * u, sp)) / sp;
+  kickDice(d.vx * cl, d.vy * cl);               // Schleudern
+}
+
+diceEl.addEventListener('pointerup', endDiceDrag);
+diceEl.addEventListener('pointercancel', () => { diceDrag = null; });
+
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space' && game.phase === 'roll' && !game.rolling &&
+      game.players.length && isHuman(game.current)) {
+    e.preventDefault();
+    kickRandom();
+  }
+});
+
+// =========================================================
+//  Tisch-Layout: Brett links (quer) bzw. oben (hochkant),
+//  20px Einzug; Rest der Holzfläche = Würfelzone
+// =========================================================
+function layoutTable() {
+  const W = window.innerWidth, H = window.innerHeight;
+  const M = 20, GAP = 18;
+  const landscape = W >= H;
+  const minDice = Math.max(140, Math.min(W, H) * 0.30);
+
+  let S;
+  if (landscape) S = Math.min(H - 2 * M, W - 2 * M - minDice);
+  else           S = Math.min(W - 2 * M, H - 2 * M - minDice);
+  S = Math.max(160, S);
+  boardCss = S;
+
   const dpr = window.devicePixelRatio || 1;
-  canvas.style.width = size + 'px';
-  canvas.style.height = size + 'px';
-  canvas.width = Math.round(size * dpr);
-  canvas.height = Math.round(size * dpr);
+  canvas.style.left = M + 'px';
+  canvas.style.top = M + 'px';
+  canvas.style.width = S + 'px';
+  canvas.style.height = S + 'px';
+  canvas.width = Math.round(S * dpr);
+  canvas.height = Math.round(S * dpr);
+
+  ds = S / 12 * 1.35;
+  diceEl.style.setProperty('--ds', ds + 'px');
+
+  if (landscape) diceZone = { x0: M + S + GAP, y0: M, x1: W - M, y1: H - M };
+  else           diceZone = { x0: M, y0: M + S + GAP, x1: W - M, y1: H - M };
+
+  // Menü-Knopf in die Ecke der Würfelzone legen
+  menuBtn.style.right = '20px';
+  menuEl.style.right = '20px';
+  if (landscape) {
+    menuBtn.style.top = '20px';  menuBtn.style.bottom = '';
+    menuEl.style.top = '76px';   menuEl.style.bottom = '';
+  } else {
+    menuBtn.style.top = '';      menuBtn.style.bottom = '20px';
+    menuEl.style.top = '';       menuEl.style.bottom = '76px';
+  }
+
+  clampDiceToZone();
 }
 
 function unit() { return canvas.width / 12; }
@@ -594,50 +939,49 @@ function draw(t) {
     }
   }
 
-  if (!game.players.length) return;
+  if (game.players.length) {
+    // Figuren zeichnen (aktueller Spieler zuletzt, damit er oben liegt)
+    const order = [0, 1, 2, 3].sort((a, b) => (a === game.current) - (b === game.current));
+    for (const q of order) {
+      const p = game.players[q];
+      if (p.type === 'off') continue;
+      for (let i = 0; i < 4; i++) {
+        const [x, y] = pieceXY(q, i);
+        const hl = game.phase === 'move' && q === game.current && isHuman(q) &&
+                   game.movable.some(m => m.piece === i);
+        drawPiece(x * u, y * u, q, rPiece, hl, t);
+      }
+    }
 
-  // Figuren zeichnen (aktueller Spieler zuletzt, damit er oben liegt)
-  const order = [0, 1, 2, 3].sort((a, b) => (a === game.current) - (b === game.current));
-  for (const q of order) {
-    const p = game.players[q];
-    if (p.type === 'off') continue;
-    for (let i = 0; i < 4; i++) {
-      const [x, y] = pieceXY(q, i);
-      const hl = game.phase === 'move' && q === game.current && isHuman(q) &&
-                 game.movable.some(m => m.piece === i);
-      drawPiece(x * u, y * u, q, rPiece, hl, t);
+    // Mögliche Schlagfelder rot markieren (Strafregel-Warnung)
+    if (game.phase === 'move' && isHuman(game.current)) {
+      for (const m of game.captureList) {
+        const [tx, ty] = FIELD_POS[m.to];
+        const pulse = 0.5 + 0.5 * Math.sin(t / 150);
+        ctx.lineWidth = u * 0.08;
+        ctx.strokeStyle = `rgba(220,30,30,${0.35 + 0.55 * pulse})`;
+        circle(tx * u, ty * u, rField * 1.12);
+        ctx.stroke();
+      }
     }
   }
+
+  drawParticles(u);
 }
 
+let lastT = 0;
 function frame(t) {
+  const dt = Math.min(0.05, (t - lastT) / 1000 || 0.016);
+  lastT = t;
+  updateParticles(dt);
+  updateDice(dt);
   draw(t);
   requestAnimationFrame(frame);
 }
 
 // =========================================================
-//  Eingabe
+//  Eingabe auf dem Brett
 // =========================================================
-function renderDice(v) {
-  diceEl.innerHTML = '';
-  for (let i = 0; i < 9; i++) {
-    const sp = document.createElement('span');
-    if (v && PIPS[v].includes(i)) sp.classList.add('on');
-    diceEl.appendChild(sp);
-  }
-}
-
-diceEl.addEventListener('click', () => {
-  if (game.phase === 'roll' && isHuman(game.current)) rollDice();
-});
-
-document.addEventListener('keydown', e => {
-  if (e.code === 'Space' && game.phase === 'roll' && isHuman(game.current)) {
-    e.preventDefault();
-    rollDice();
-  }
-});
-
 canvas.addEventListener('pointerdown', e => {
   if (game.phase !== 'move' || !isHuman(game.current)) return;
   const rect = canvas.getBoundingClientRect();
@@ -656,7 +1000,33 @@ canvas.addEventListener('pointerdown', e => {
   }
 });
 
-window.addEventListener('resize', resizeCanvas);
+window.addEventListener('resize', layoutTable);
+
+// =========================================================
+//  Hamburger-Menü
+// =========================================================
+menuBtn.addEventListener('click', e => {
+  e.stopPropagation();
+  menuEl.classList.toggle('hidden');
+});
+
+document.addEventListener('pointerdown', e => {
+  if (!menuEl.classList.contains('hidden') &&
+      !menuEl.contains(e.target) && e.target !== menuBtn && !menuBtn.contains(e.target)) {
+    menuEl.classList.add('hidden');
+  }
+});
+
+document.getElementById('mNew').addEventListener('click', () => {
+  menuEl.classList.add('hidden');
+  showSetup();
+});
+
+document.getElementById('mLog').addEventListener('click', () => {
+  const open = logEl.classList.toggle('open');
+  document.getElementById('mLog').textContent =
+    open ? '📜 Protokoll ausblenden' : '📜 Protokoll anzeigen';
+});
 
 // =========================================================
 //  Setup / Neues Spiel
@@ -730,16 +1100,24 @@ function startGame() {
     hint.textContent = 'Es müssen mindestens 2 Spieler mitspielen!';
     return;
   }
-  hint.textContent = ' ';
+  hint.textContent = ' ';
 
   game.seq++;
   game.players = types.map(t => ({ type: t, pieces: [-1, -1, -1, -1], finished: false }));
   game.ranking = [];
   game.rolling = false;
+  game.captureList = [];
+  particles.length = 0;
   logLines.length = 0;
   logEl.innerHTML = '';
   document.getElementById('setup').classList.add('hidden');
   document.getElementById('gameover').classList.add('hidden');
+
+  // Würfel zurücksetzen und in die Zone legen
+  dice.state = 'idle';
+  dice.vx = 0; dice.vy = 0; dice.z = 0; dice.vz = 0;
+  placeDiceInZone();
+  diceEl.classList.remove('hidden');
 
   game.current = types.findIndex(t => t !== 'off');
   addLog('Neues Spiel gestartet. Viel Glück!');
@@ -749,16 +1127,19 @@ function startGame() {
 function showSetup() {
   game.seq++;
   game.phase = 'setup';
+  game.rolling = false;
+  diceEl.classList.add('hidden');
   document.getElementById('gameover').classList.add('hidden');
   document.getElementById('setup').classList.remove('hidden');
 }
 
 document.getElementById('btnStart').addEventListener('click', startGame);
-document.getElementById('btnNew').addEventListener('click', showSetup);
 document.getElementById('btnAgain').addEventListener('click', showSetup);
 
 // ---------- Los geht's ----------
 buildSetup();
-resizeCanvas();
-renderDice(null);
+buildCube();
+layoutTable();
+placeDiceInZone();
+cubeEl.style.transform = qToCss(dice.q);
 requestAnimationFrame(frame);

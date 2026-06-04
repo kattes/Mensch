@@ -8,21 +8,24 @@
 </head>
 <body>
 
-<div id="app">
-  <div id="boardwrap">
-    <canvas id="board"></canvas>
-  </div>
+<!-- Der Holztisch ist der Body-Hintergrund; das Brett liegt mit 20px Einzug
+     links (Querformat) bzw. oben (Hochformat). Die restliche Holzfläche ist
+     die Würfelzone. -->
+<canvas id="board"></canvas>
 
-  <aside id="panel">
-    <h1>Mensch ärgere<br>Dich nicht</h1>
-    <div id="status">&nbsp;</div>
-    <div id="diceArea">
-      <div id="dice" class="dice" title="Würfeln"></div>
-      <div id="diceLabel">&nbsp;</div>
-    </div>
-    <div id="log"></div>
-    <button id="btnNew" class="btn">Neues Spiel</button>
-  </aside>
+<!-- 3D-Würfel, rollt nur auf der Holzfläche -->
+<div id="dice3d" class="hidden"><div class="cube" id="cube"></div></div>
+
+<!-- Hamburger-Menü -->
+<button id="menuBtn" aria-label="Menü">
+  <span></span><span></span><span></span>
+</button>
+
+<div id="menu" class="hidden">
+  <button id="mNew" class="btn">🔄 Neues Spiel</button>
+  <button id="mLog" class="btn">📜 Protokoll anzeigen</button>
+  <div id="log"></div>
+  <button id="mSound" class="btn" disabled title="Demnächst">🔊 Soundeffekte (bald)</button>
 </div>
 
 <!-- Spielerauswahl -->
