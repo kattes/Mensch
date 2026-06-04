@@ -597,9 +597,20 @@ let ds = 80;                                       // Würfelgröße (px)
 
 function cssU() { return boardCss / 12; }
 
+const faceEls = {}, ifaceEls = {};
+
 function buildCube() {
   cubeEl.innerHTML = '';
   for (let v = 1; v <= 6; v++) {
+    // Innerer Kern (geschlossen, ohne Rundung) – füllt die Ecklücken
+    const fi = document.createElement('div');
+    fi.className = 'iface';
+    fi.style.transform =
+      `${FACE_TF[v]} translateZ(calc(var(--ds, 80px) / 2 - var(--inset, 2px)))`;
+    cubeEl.appendChild(fi);
+    ifaceEls[v] = fi;
+
+    // Außenfläche mit Augen
     const f = document.createElement('div');
     f.className = 'face';
     f.style.transform = `${FACE_TF[v]} translateZ(calc(var(--ds, 80px) / 2))`;
@@ -609,6 +620,25 @@ function buildCube() {
       f.appendChild(sp);
     }
     cubeEl.appendChild(f);
+    faceEls[v] = f;
+  }
+}
+
+// Einfache Beleuchtung: Jede Seite wird nach ihrem Winkel zur Lichtquelle
+// (oben links vorn) abgedunkelt – macht den Würfel plastisch.
+const LIGHT = (() => {
+  const l = [-0.35, -0.5, 0.79];
+  const n = Math.hypot(l[0], l[1], l[2]);
+  return [l[0] / n, l[1] / n, l[2] / n];
+})();
+
+function applyLighting() {
+  for (let v = 1; v <= 6; v++) {
+    const n = qRotate(dice.q, FACE_NORMALS[v]);
+    const d = n[0] * LIGHT[0] + n[1] * LIGHT[1] + n[2] * LIGHT[2];
+    const b = (0.62 + 0.5 * Math.max(0, d)).toFixed(3);
+    faceEls[v].style.filter = `brightness(${b})`;
+    ifaceEls[v].style.filter = `brightness(${b})`;
   }
 }
 
@@ -714,6 +744,7 @@ function updateDice(dt) {
     }
 
     cubeEl.style.transform = qToCss(dice.q);
+    applyLighting();
 
     if (speed < 0.5 * u && dice.z <= 0.01) settleDice();
   }
@@ -724,6 +755,7 @@ function updateDice(dt) {
     const e = 1 - Math.pow(1 - k, 3);           // ease-out
     dice.q = qSlerp(dice.qFrom, dice.qTo, e);
     cubeEl.style.transform = qToCss(dice.q);
+    applyLighting();
     if (k >= 1) {
       dice.q = dice.qTo;
       dice.state = 'idle';
@@ -823,6 +855,7 @@ function layoutTable() {
   ds = S / 12 * 1.35;
   // global setzen, damit auch Schatten und Leuchtring (Geschwister) sie sehen
   document.documentElement.style.setProperty('--ds', ds + 'px');
+  document.documentElement.style.setProperty('--inset', Math.max(1.5, ds * 0.022) + 'px');
 
   if (landscape) diceZone = { x0: M + S + GAP, y0: M, x1: W - M, y1: H - M };
   else           diceZone = { x0: M, y0: M + S + GAP, x1: W - M, y1: H - M };
@@ -1162,4 +1195,5 @@ buildCube();
 layoutTable();
 placeDiceInZone();
 cubeEl.style.transform = qToCss(dice.q);
+applyLighting();
 requestAnimationFrame(frame);
