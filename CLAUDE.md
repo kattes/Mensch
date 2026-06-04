@@ -32,7 +32,11 @@ Kein Build, kein Server, keine Abhängigkeiten — einfach `index.html` im Brows
 - **Rendering**: Canvas, dauerhafte `requestAnimationFrame`-Schleife; `draw(t)` zeichnet den
   kompletten Zustand jedes Frame (Highlight-Pulsieren über Zeitparameter `t`); `frame(t)`
   liefert zusätzlich `dt` für Partikel- und Würfelphysik.
-- **Tisch-Layout**: Der Body ist ein Holztisch (CSS-Gradients). `layoutTable()` legt das
+- **Holztextur**: prozedural in `makeWoodTexture()`/`drawPlank()` erzeugt (dunkles
+  Walnussholz, nahtlose 1024er-Kachel: ganzzahlige Wellenperioden, Knoten nur im
+  Kachelinneren) und in `applyWood()` mit Lichtschein + Vignette als Body-Hintergrund
+  gesetzt; `style.css` enthält nur die Fallback-Grundfarbe.
+- **Tisch-Layout**: `layoutTable()` legt das
   Brett mit 20 px Einzug links (Querformat) bzw. oben (Hochformat); die restliche
   Holzfläche ist die Würfelzone (`diceZone`, Tisch-Pixel). Keine Statustexte — wer dran
   ist, zeigen das pulsierende Homebase-Feld und der Würfel-Glow in Spielerfarbe

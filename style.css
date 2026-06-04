@@ -7,25 +7,12 @@ html, body {
   color: #eee;
 }
 
-/* ---------- Holztisch ---------- */
+/* ---------- Holztisch ----------
+   Die eigentliche Maserung wird prozedural in game.js erzeugt
+   (makeWoodTexture) und als Hintergrundbild gesetzt; hier nur die
+   dunkle Grundfarbe als Fallback, bis das Bild bereitsteht. */
 body {
-  background-color: #7b5632;
-  background-image:
-    /* Lichtschein von oben */
-    radial-gradient(ellipse 120% 90% at 35% 15%, rgba(255,235,190,.14), transparent 65%),
-    /* feine Maserung */
-    repeating-linear-gradient(91deg,
-      rgba(60,32,10,.10) 0px, rgba(60,32,10,0) 5px,
-      rgba(255,225,170,.05) 9px, rgba(60,32,10,0) 14px,
-      rgba(60,32,10,.07) 21px, rgba(60,32,10,0) 28px),
-    /* Plankenfugen */
-    repeating-linear-gradient(90deg,
-      rgba(30,15,5,.45) 0px, rgba(30,15,5,.45) 2px, transparent 2px, transparent 168px),
-    /* Planken in leicht unterschiedlichen Tönen */
-    repeating-linear-gradient(90deg,
-      #6e4a26 0px, #7d5630 70px, #74512b 140px, #80592f 168px),
-    /* Grundverlauf mit Vignette */
-    radial-gradient(ellipse at 50% 50%, #7e5933 0%, #5e401f 100%);
+  background-color: #3d2814;
 }
 
 /* ---------- Spielbrett (liegt auf dem Tisch) ---------- */

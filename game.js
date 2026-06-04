@@ -831,6 +831,101 @@ document.addEventListener('keydown', e => {
 });
 
 // =========================================================
+//  Prozedurale Holztextur: dunkles Walnussholz mit Planken,
+//  welliger Maserung, Farbbändern, Astknoten und Fugen.
+//  Die Kachel ist nahtlos (ganzzahlige Wellenperioden).
+// =========================================================
+function drawPlank(g, x0, w, H) {
+  // Grundton der Planke (jede etwas anders)
+  const tone = 0.85 + Math.random() * 0.3;
+  const r = Math.round(56 * tone), gr = Math.round(36 * tone), b = Math.round(19 * tone);
+  g.fillStyle = `rgb(${r},${gr},${b})`;
+  g.fillRect(x0, 0, w, H);
+
+  // Niederfrequente Farbbänder längs der Faser
+  for (let i = 0; i < 6; i++) {
+    const bx = x0 + Math.random() * w, bw = 8 + Math.random() * 30;
+    const light = Math.random() < 0.45;
+    const grad = g.createLinearGradient(bx - bw, 0, bx + bw, 0);
+    const col = light ? '255,205,140' : '12,6,2';
+    grad.addColorStop(0, `rgba(${col},0)`);
+    grad.addColorStop(0.5, `rgba(${col},${0.04 + Math.random() * 0.05})`);
+    grad.addColorStop(1, `rgba(${col},0)`);
+    g.fillStyle = grad;
+    g.fillRect(bx - bw, 0, bw * 2, H);
+  }
+
+  // Wellige Maserlinien, vertikal durchgehend
+  const lines = Math.floor(w / 3);
+  for (let i = 0; i < lines; i++) {
+    const lx = x0 + 6 + Math.random() * (w - 12);
+    const amp = 1 + Math.random() * 3.5;
+    const k = 1 + Math.floor(Math.random() * 3);       // ganze Perioden → kachelbar
+    const ph = Math.random() * Math.PI * 2;
+    const dark = Math.random() < 0.72;
+    g.strokeStyle = dark
+      ? `rgba(10,5,2,${0.08 + Math.random() * 0.12})`
+      : `rgba(255,210,150,${0.04 + Math.random() * 0.05})`;
+    g.lineWidth = 0.6 + Math.random() * 1.6;
+    g.beginPath();
+    for (let y = 0; y <= H; y += 8) {
+      const t = y / H * Math.PI * 2;
+      const wx = lx + amp * Math.sin(t * k + ph) + amp * 0.5 * Math.sin(t * k * 3 + ph * 2);
+      if (y === 0) g.moveTo(wx, y); else g.lineTo(wx, y);
+    }
+    g.stroke();
+  }
+
+  // Gelegentlich ein Astknoten (mit Jahresringen)
+  if (Math.random() < 0.5) {
+    const kx = x0 + w * 0.3 + Math.random() * w * 0.4;
+    const ky = 80 + Math.random() * (H - 160);
+    const kr = 5 + Math.random() * 9;
+    for (let i = 5; i >= 1; i--) {
+      g.strokeStyle = `rgba(12,6,2,${0.05 + 0.035 * i})`;
+      g.lineWidth = 1.2;
+      g.beginPath();
+      g.ellipse(kx, ky, kr * i / 3, kr * i / 3 * 1.7, 0, 0, Math.PI * 2);
+      g.stroke();
+    }
+    g.fillStyle = 'rgba(16,8,3,0.55)';
+    g.beginPath();
+    g.ellipse(kx, ky, kr * 0.45, kr * 0.75, 0, 0, Math.PI * 2);
+    g.fill();
+  }
+
+  // Fuge mit Lichtkante
+  g.fillStyle = 'rgba(6,3,1,0.85)';
+  g.fillRect(x0 + w - 2, 0, 2, H);
+  g.fillStyle = 'rgba(255,210,150,0.06)';
+  g.fillRect(x0, 0, 1.5, H);
+}
+
+function makeWoodTexture() {
+  const W = 1024, H = 1024;
+  const c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const g = c.getContext('2d');
+  let x = 0;
+  while (x < W) {
+    let w = 120 + Math.random() * 90;
+    if (W - (x + w) < 70) w = W - x;   // letzte Planke schließt die Kachel
+    drawPlank(g, x, w, H);
+    x += w;
+  }
+  return c.toDataURL('image/png');
+}
+
+function applyWood() {
+  document.body.style.backgroundImage =
+    // sanfter Lichtschein oben links + Vignette, darunter die Holzkachel
+    'radial-gradient(ellipse 120% 90% at 35% 15%, rgba(255,230,180,.07), transparent 65%),' +
+    'radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0) 50%, rgba(0,0,0,.38) 100%),' +
+    `url(${makeWoodTexture()})`;
+  document.body.style.backgroundRepeat = 'no-repeat, no-repeat, repeat';
+}
+
+// =========================================================
 //  Tisch-Layout: Brett links (quer) bzw. oben (hochkant),
 //  20px Einzug; Rest der Holzfläche = Würfelzone
 // =========================================================
@@ -1194,6 +1289,7 @@ document.getElementById('btnStart').addEventListener('click', startGame);
 document.getElementById('btnAgain').addEventListener('click', showSetup);
 
 // ---------- Los geht's ----------
+applyWood();
 buildSetup();
 buildCube();
 layoutTable();
