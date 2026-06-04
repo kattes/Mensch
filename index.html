@@ -13,7 +13,12 @@
      die Würfelzone. -->
 <canvas id="board"></canvas>
 
-<!-- 3D-Würfel, rollt nur auf der Holzfläche -->
+<!-- 3D-Würfel, rollt nur auf der Holzfläche.
+     Glow (wer ist dran) und Bodenschatten liegen als eigene Ebenen
+     UNTER dem Würfel auf dem Tisch – kein drop-shadow-Filter, der
+     durch die abgerundeten Ecken schwarz durchscheinen könnte. -->
+<div id="diceGlow" class="hidden"></div>
+<div id="diceShadow" class="hidden"></div>
 <div id="dice3d" class="hidden"><div class="cube" id="cube"></div></div>
 
 <!-- Hamburger-Menü -->

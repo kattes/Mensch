@@ -37,6 +37,8 @@ body {
 }
 
 /* ---------- 3D-Würfel ---------- */
+/* Wichtig: KEIN filter/drop-shadow auf #dice3d – der würde hinter die
+   Flächen gemalt und schiene durch die abgerundeten Ecken schwarz durch. */
 #dice3d {
   position: absolute;
   left: 0; top: 0;
@@ -47,21 +49,46 @@ body {
   cursor: grab;
   touch-action: none;
   will-change: transform;
-  filter: drop-shadow(0 6px 6px rgba(0,0,0,.45));
-  --glow: #ffd54f;
 }
 
 #dice3d.hidden { display: none; }
 
-#dice3d.rollable {
-  cursor: pointer;
-  animation: diceGlow 1.1s ease-in-out infinite;
+#dice3d.rollable { cursor: pointer; }
+
+/* Bodenschatten: liegt als Ellipse auf dem Tisch unter dem Würfel */
+#diceShadow {
+  position: absolute;
+  left: 0; top: 0;
+  width: var(--ds, 80px);
+  height: calc(var(--ds, 80px) * 0.78);
+  background: radial-gradient(ellipse,
+    rgba(0,0,0,.40) 0%, rgba(0,0,0,.22) 45%, transparent 70%);
+  z-index: 4;
+  pointer-events: none;
+  will-change: transform;
 }
 
-@keyframes diceGlow {
-  0%, 100% { filter: drop-shadow(0 6px 6px rgba(0,0,0,.45)) drop-shadow(0 0 5px var(--glow)); }
-  50%      { filter: drop-shadow(0 6px 6px rgba(0,0,0,.45)) drop-shadow(0 0 18px var(--glow)); }
+/* Leuchtring auf dem Tisch: zeigt, welcher (menschliche) Spieler dran ist */
+#diceGlow {
+  position: absolute;
+  left: 0; top: 0;
+  width: calc(var(--ds, 80px) * 2);
+  height: calc(var(--ds, 80px) * 2);
+  background: radial-gradient(circle, var(--glow, #ffd54f) 0%, transparent 62%);
+  z-index: 3;
+  pointer-events: none;
+  opacity: 0;
+  will-change: transform, opacity;
 }
+
+#diceGlow.on { animation: glowPulse 1.1s ease-in-out infinite; }
+
+@keyframes glowPulse {
+  0%, 100% { opacity: .30; }
+  50%      { opacity: .75; }
+}
+
+#diceShadow.hidden, #diceGlow.hidden { display: none; }
 
 .cube {
   width: 100%;

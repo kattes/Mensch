@@ -91,10 +91,12 @@ const game = {
 };
 
 // ---------- DOM ----------
-const canvas  = document.getElementById('board');
-const ctx     = canvas.getContext('2d');
-const diceEl  = document.getElementById('dice3d');
-const cubeEl  = document.getElementById('cube');
+const canvas   = document.getElementById('board');
+const ctx      = canvas.getContext('2d');
+const diceEl   = document.getElementById('dice3d');
+const cubeEl   = document.getElementById('cube');
+const shadowEl = document.getElementById('diceShadow');
+const glowEl   = document.getElementById('diceGlow');
 const logEl   = document.getElementById('log');
 const menuEl  = document.getElementById('menu');
 const menuBtn = document.getElementById('menuBtn');
@@ -227,12 +229,15 @@ function startTurn() {
   if (isKI(game.current)) schedule(kickRandom, 900);
 }
 
-// Statt Statustexten: Der Würfel leuchtet in der Farbe des Spielers, der dran ist
+// Statt Statustexten: Ein Leuchtring auf dem Tisch unter dem Würfel
+// pulsiert in der Farbe des Spielers, der dran ist
 function updateDiceCue() {
   diceEl.classList.remove('rollable');
+  glowEl.classList.remove('on');
   if (game.phase === 'roll' && !game.rolling &&
       game.players.length && isHuman(game.current)) {
-    diceEl.style.setProperty('--glow', HEX[game.current]);
+    glowEl.style.setProperty('--glow', HEX[game.current]);
+    glowEl.classList.add('on');
     diceEl.classList.add('rollable');
   }
 }
@@ -731,6 +736,16 @@ function updateDice(dt) {
   const scale = 1 + dice.z / (1.6 * ds);
   diceEl.style.transform =
     `translate(${dice.x - ds / 2}px, ${dice.y - ds / 2}px) scale(${scale})`;
+
+  // Bodenschatten: bleibt auf dem Tisch, wird beim Hüpfen größer und blasser
+  const sh = ds * 0.78;
+  shadowEl.style.transform =
+    `translate(${dice.x - ds / 2}px, ${dice.y - sh / 2 + ds * 0.10 + dice.z * 0.25}px) ` +
+    `scale(${1 + dice.z / (2.5 * ds)})`;
+  shadowEl.style.opacity = String(Math.max(0.3, 0.85 - dice.z / (2 * ds)));
+
+  // Leuchtring zentriert unter dem Würfel
+  glowEl.style.transform = `translate(${dice.x - ds}px, ${dice.y - ds}px)`;
 }
 
 // ---- Würfel anstupsen / schleudern ----
@@ -806,7 +821,8 @@ function layoutTable() {
   canvas.height = Math.round(S * dpr);
 
   ds = S / 12 * 1.35;
-  diceEl.style.setProperty('--ds', ds + 'px');
+  // global setzen, damit auch Schatten und Leuchtring (Geschwister) sie sehen
+  document.documentElement.style.setProperty('--ds', ds + 'px');
 
   if (landscape) diceZone = { x0: M + S + GAP, y0: M, x1: W - M, y1: H - M };
   else           diceZone = { x0: M, y0: M + S + GAP, x1: W - M, y1: H - M };
@@ -1118,6 +1134,8 @@ function startGame() {
   dice.vx = 0; dice.vy = 0; dice.z = 0; dice.vz = 0;
   placeDiceInZone();
   diceEl.classList.remove('hidden');
+  shadowEl.classList.remove('hidden');
+  glowEl.classList.remove('hidden');
 
   game.current = types.findIndex(t => t !== 'off');
   addLog('Neues Spiel gestartet. Viel Glück!');
@@ -1129,6 +1147,8 @@ function showSetup() {
   game.phase = 'setup';
   game.rolling = false;
   diceEl.classList.add('hidden');
+  shadowEl.classList.add('hidden');
+  glowEl.classList.add('hidden');
   document.getElementById('gameover').classList.add('hidden');
   document.getElementById('setup').classList.remove('hidden');
 }
