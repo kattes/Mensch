@@ -69,6 +69,12 @@ Kein Build, kein Server, keine Abhängigkeiten — einfach `index.html` im Brows
   Fallback (`applyLighting()` läuft nur dann).
 - **Explosionen**: Partikelsystem (`particles`, `spawnExplosion()`) für geschlagene und
   bestrafte Figuren, gezeichnet in `drawParticles()`.
+- **Sound**: prozedural per Web Audio API (`tone()`/`noiseHit()` + `sfx*()`-Funktionen),
+  keine Audiodateien. AudioContext erst nach Nutzergeste (`audioInit()`, Autoplay-Policy),
+  DynamicsCompressor gegen Lautstärkespitzen. Ereignisse: Banden-/Tischaufprall
+  (stärkeabhängig, max. alle 70 ms), Liegenbleiben (+ Glöckchen bei 6), Zugschritte,
+  Rauskommen, Schlagen/Strafe, Zieleinlauf, Fanfare. An/Aus über das Menü,
+  gemerkt in `localStorage('soundOn')`.
 - **Timer-Sicherheit**: `game.seq` wird bei „Neues Spiel" erhöht; `schedule()` entwertet damit
   alte KI-/Animations-Timer. Neue verzögerte Aktionen immer über `schedule()` laufen lassen.
 - **KI**: Heuristik in `aiPickMove()` — Schlagen > Ziel erreichen > Rauskommen > Flucht aus

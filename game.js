@@ -315,6 +315,7 @@ function executeMove(m) {
   const iv = setInterval(() => {
     if (s !== game.seq) { clearInterval(iv); return; }
     game.players[c].pieces[m.piece] = path[idx++];
+    sfxTick();
     if (idx >= path.length) {
       clearInterval(iv);
       schedule(() => finalizeMove(m), 180);
@@ -333,6 +334,7 @@ function finalizeMove(m) {
     if (hit) {
       const [ex, ey] = FIELD_POS[pos];
       spawnExplosion(ex, ey, HEX[hit.player]);
+      sfxBoom();
       game.players[hit.player].pieces[hit.piece] = -1;
       addLog(`💥 ${NAMES[c]} schlägt ${NAMES[hit.player]} – Mensch ärgere Dich nicht!`);
       hasCaptured = true;
@@ -346,19 +348,21 @@ function finalizeMove(m) {
     const pun = (others.length ? others[0] : game.captureList[0]).piece;
     const [px, py] = pieceXY(c, pun);
     spawnExplosion(px, py, HEX[c]);
+    sfxBoom();
     game.players[c].pieces[pun] = -1;
     addLog(`⚖️ Strafe! ${NAMES[c]} hätte schlagen können – die säumige Figur fliegt raus!`);
   }
   game.captureList = [];
 
-  if (m.type === 'out') addLog(`${NAMES[c]} bringt eine Figur ins Spiel.`);
-  if (m.type === 'goal') addLog(`${NAMES[c]} zieht ins Ziel.`);
+  if (m.type === 'out') { sfxPop(); addLog(`${NAMES[c]} bringt eine Figur ins Spiel.`); }
+  if (m.type === 'goal') { sfxGoal(); addLog(`${NAMES[c]} zieht ins Ziel.`); }
 
   // Fertig?
   const p = game.players[c];
   if (!p.finished && p.pieces.every(x => x >= 40)) {
     p.finished = true;
     game.ranking.push(c);
+    sfxFanfare();
     addLog(`🏁 ${NAMES[c]} hat alle Figuren im Ziel!`);
   }
 
@@ -454,6 +458,121 @@ function aiPickMove(moves, pIdx) {
   }
   return best;
 }
+
+// =========================================================
+//  Soundeffekte – prozedural per Web Audio API, keine Dateien.
+//  Der AudioContext wird erst nach der ersten Nutzergeste
+//  erzeugt (Autoplay-Policy der Browser).
+// =========================================================
+let AC = null, sfxOut = null;
+let soundOn = localStorage.getItem('soundOn') !== '0';
+
+function audioInit() {
+  if (!soundOn) return;
+  if (!AC) {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    AC = new Ctx();
+    const master = AC.createGain();
+    master.gain.value = 0.45;
+    const comp = AC.createDynamicsCompressor(); // fängt Lautstärkespitzen ab
+    master.connect(comp);
+    comp.connect(AC.destination);
+    sfxOut = master;
+  }
+  if (AC.state === 'suspended') AC.resume();
+}
+document.addEventListener('pointerdown', audioInit, true);
+
+// Einzelner Ton mit Frequenzverlauf und exponentiellem Ausklang
+function tone(type, f0, f1, dur, vol, delay = 0) {
+  if (!AC || !soundOn) return;
+  const t = AC.currentTime + delay;
+  const o = AC.createOscillator();
+  const g = AC.createGain();
+  o.type = type;
+  o.frequency.setValueAtTime(f0, t);
+  o.frequency.exponentialRampToValueAtTime(Math.max(1, f1), t + dur);
+  g.gain.setValueAtTime(vol, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  o.connect(g).connect(sfxOut);
+  o.start(t);
+  o.stop(t + dur + 0.02);
+}
+
+// Gefiltertes Rauschen (für Aufprall, Explosion)
+let noiseBuf = null;
+function noiseHit(dur, vol, fc0, fc1, delay = 0) {
+  if (!AC || !soundOn) return;
+  if (!noiseBuf) {
+    noiseBuf = AC.createBuffer(1, AC.sampleRate, AC.sampleRate);
+    const d = noiseBuf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  }
+  const t = AC.currentTime + delay;
+  const src = AC.createBufferSource();
+  src.buffer = noiseBuf;
+  src.loop = true;
+  src.playbackRate.value = 0.9 + Math.random() * 0.2;
+  const f = AC.createBiquadFilter();
+  f.type = 'lowpass';
+  f.frequency.setValueAtTime(fc0, t);
+  f.frequency.exponentialRampToValueAtTime(Math.max(40, fc1), t + dur);
+  const g = AC.createGain();
+  g.gain.setValueAtTime(vol, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  src.connect(f).connect(g).connect(sfxOut);
+  src.start(t);
+  src.stop(t + dur + 0.02);
+}
+
+let lastKnockT = 0;
+function sfxKnock(strength) {       // Würfel prallt auf Bande/Tisch
+  const now = performance.now();
+  if (now - lastKnockT < 70) return; // nicht schneller als alle 70 ms
+  lastKnockT = now;
+  const v = Math.min(0.5, 0.10 + strength * 0.35);
+  tone('triangle', 150 + Math.random() * 70, 65, 0.09, v);
+  noiseHit(0.05, v * 0.7, 2500, 500);
+}
+function sfxThud() {                // Würfel kommt zur Ruhe
+  tone('sine', 120, 55, 0.16, 0.35);
+  noiseHit(0.08, 0.18, 1400, 250);
+}
+function sfxSix() {                 // Glöckchen bei einer 6
+  tone('sine', 1319, 1319, 0.22, 0.20, 0.12);
+}
+function sfxTick() {                // Figur hüpft ein Feld weiter
+  tone('square', 650 + Math.random() * 180, 480, 0.045, 0.10);
+}
+function sfxPop() {                 // Figur kommt ins Spiel
+  tone('sine', 300, 640, 0.13, 0.28);
+}
+function sfxBoom() {                // Figur wird geschlagen
+  noiseHit(0.55, 0.55, 1400, 110);
+  tone('sine', 110, 36, 0.5, 0.5);
+}
+function sfxGoal() {                // Figur erreicht das Ziel
+  tone('sine', 659, 659, 0.18, 0.22);
+  tone('sine', 988, 988, 0.28, 0.20, 0.12);
+}
+function sfxFanfare() {             // Spieler ist fertig / Spielende
+  [523, 659, 784, 1047].forEach((f, i) => tone('triangle', f, f, 0.30, 0.28, i * 0.16));
+  tone('triangle', 1047, 1047, 0.6, 0.22, 0.7);
+}
+
+// Menüpunkt: Sound an/aus (gemerkt in localStorage)
+const mSoundEl = document.getElementById('mSound');
+function refreshSoundBtn() {
+  mSoundEl.textContent = soundOn ? '🔊 Sound: an' : '🔇 Sound: aus';
+}
+mSoundEl.addEventListener('click', () => {
+  soundOn = !soundOn;
+  localStorage.setItem('soundOn', soundOn ? '1' : '0');
+  if (soundOn) { audioInit(); sfxPop(); } // kurzes Feedback
+  refreshSoundBtn();
+});
+refreshSoundBtn();
 
 // =========================================================
 //  Explosionspartikel
@@ -721,12 +840,18 @@ function updateDice(dt) {
     if (dice.y > diceZone.y1 - h) { dice.y = diceZone.y1 - h; dice.vy = -Math.abs(dice.vy) * R; bounced = true; }
 
     const speed = Math.hypot(dice.vx, dice.vy);
+    if (bounced) sfxKnock(speed / (9 * u));
 
     // Hüpfen: beim Anstoß und an der Bande springt der Würfel leicht auf
     if (bounced) dice.vz = Math.max(dice.vz, Math.min(2.2 * u, speed * 0.25));
     dice.z += dice.vz * dt;
     dice.vz -= 14 * u * dt;                     // "Schwerkraft"
-    if (dice.z < 0) { dice.z = 0; dice.vz = -dice.vz * 0.42; if (Math.abs(dice.vz) < 0.3 * u) dice.vz = 0; }
+    if (dice.z < 0) {
+      dice.z = 0;
+      dice.vz = -dice.vz * 0.42;
+      if (Math.abs(dice.vz) < 0.3 * u) dice.vz = 0;
+      else sfxKnock(dice.vz / (3 * u));         // Aufprall auf den Tisch
+    }
 
     // Gleitreibung: lineare Abbremsung wirkt natürlicher als exponentiell
     const dec = 3.4 * u * dt;
@@ -763,6 +888,8 @@ function updateDice(dt) {
       dice.q = dice.qTo;
       dice.state = 'idle';
       game.rolling = false;
+      sfxThud();
+      if (dice.value === 6) sfxSix();
       resolveRoll(dice.value);
     }
   }
