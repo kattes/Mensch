@@ -1122,6 +1122,14 @@ function layoutTable() {
   if (landscape) diceZone = { x0: M + S + GAP, y0: M, x1: W - M, y1: H - M };
   else           diceZone = { x0: M, y0: M + S + GAP, x1: W - M, y1: H - M };
 
+  // Spielaufbau-Anzeige (Anleitung + Start) füllt die Würfelzone
+  const sz = document.getElementById('setupZone');
+  sz.style.left = diceZone.x0 + 'px';
+  sz.style.top = diceZone.y0 + 'px';
+  sz.style.width = (diceZone.x1 - diceZone.x0) + 'px';
+  sz.style.height = (diceZone.y1 - diceZone.y0) + 'px';
+  if (typeof closePalette === 'function' && game.phase === 'setup') closePalette();
+
   // Menü-Knopf in die Ecke der Würfelzone legen
   menuBtn.style.right = '20px';
   menuEl.style.right = '20px';
@@ -1251,6 +1259,27 @@ function draw(t) {
     }
   }
 
+  // Spielaufbau: Pools zeigen 4 Figuren in der gewählten Farbe plus
+  // Typ-Symbol; "Nicht dabei" = leere Homebase. Kein Spielgeschehen.
+  if (game.phase === 'setup') {
+    const BADGE = { human: '👤', ki: '🤖' };
+    const BADGE_POS = [[2, 3.55], [10, 3.55], [10, 8.45], [2, 8.45]];
+    for (let q = 0; q < 4; q++) {
+      if (setupTypes[q] === 'off') continue;
+      for (const [hx, hy] of HOME_POS[q]) drawPiece(hx * u, hy * u, q, rPiece, false, t);
+      const [bx, by] = BADGE_POS[q];
+      ctx.fillStyle = 'rgba(255,255,255,.85)';
+      circle(bx * u, by * u, u * 0.42);
+      ctx.fill();
+      ctx.font = `${u * 0.5}px "Segoe UI Emoji", "Segoe UI", sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(BADGE[setupTypes[q]], bx * u, by * u + u * 0.03);
+    }
+    drawParticles(u);
+    return;
+  }
+
   if (game.players.length) {
     // Figuren zeichnen (aktueller Spieler zuletzt, damit er oben liegt)
     const order = [0, 1, 2, 3].sort((a, b) => (a === game.current) - (b === game.current));
@@ -1296,12 +1325,38 @@ function frame(t) {
 //  Eingabe auf dem Brett
 // =========================================================
 canvas.addEventListener('pointerdown', e => {
-  if (game.phase !== 'move' || !isHuman(game.current)) return;
   const rect = canvas.getBoundingClientRect();
   const dpr = canvas.width / rect.width;
   const mx = (e.clientX - rect.left) * dpr;
   const my = (e.clientY - rect.top) * dpr;
   const u = unit();
+
+  // ---- Spielaufbau: Klicks auf die Pools ----
+  if (game.phase === 'setup') {
+    const ux = mx / u, uy = my / u;
+    const POOL_RECTS = [
+      [0.6, 0.6, 3.4, 4.0], [8.6, 0.6, 11.4, 4.0],
+      [8.6, 8.0, 11.4, 11.4], [0.6, 8.0, 3.4, 11.4]
+    ];
+    for (let q = 0; q < 4; q++) {
+      const [x0, y0, x1, y1] = POOL_RECTS[q];
+      if (ux >= x0 && ux <= x1 && uy >= y0 && uy <= y1) {
+        // Figur getroffen → Farbwahl; sonst → Typ durchschalten
+        if (setupTypes[q] !== 'off') {
+          for (const [hx, hy] of HOME_POS[q]) {
+            if (Math.hypot(ux - hx, uy - hy) < 0.52) { openPalette(q); return; }
+          }
+        }
+        closePalette();
+        cycleType(q);
+        return;
+      }
+    }
+    closePalette();
+    return;
+  }
+
+  if (game.phase !== 'move' || !isHuman(game.current)) return;
 
   for (const m of game.movable) {
     // Klick auf die Figur …
@@ -1328,6 +1383,10 @@ document.addEventListener('pointerdown', e => {
       !menuEl.contains(e.target) && e.target !== menuBtn && !menuBtn.contains(e.target)) {
     menuEl.classList.add('hidden');
   }
+  // Farb-Popup schließen bei Klick daneben (Canvas regelt sich selbst)
+  if (paletteSeat >= 0 && !palettePopEl.contains(e.target) && e.target !== canvas) {
+    closePalette();
+  }
 });
 
 document.getElementById('mNew').addEventListener('click', () => {
@@ -1343,77 +1402,86 @@ document.getElementById('mLog').addEventListener('click', () => {
 
 // =========================================================
 //  Setup / Neues Spiel
+//  Konfiguration direkt am Brett: Figur antippen = Farbe wählen
+//  (Popup am Pool), Pool antippen = Mensch/Computer/Nicht dabei
+//  durchschalten. Start über den zentralen Button auf dem Holz.
 // =========================================================
-function buildSetup() {
-  const rows = document.getElementById('playerRows');
-  rows.innerHTML = '';
-  const defaults = ['human', 'ki', 'off', 'off'];
-  for (let q = 0; q < 4; q++) {
-    const block = document.createElement('div');
-    block.className = 'player-block';
+const setupTypes = ['human', 'ki', 'off', 'off']; // Typ je Spielerplatz
+let paletteSeat = -1;                             // Pool, dessen Palette offen ist
 
-    const row = document.createElement('div');
-    row.className = 'player-row';
-    row.innerHTML = `
-      <div class="swatch" id="swatch${q}" style="background:${HEX[q]}"></div>
-      <div class="pname" id="pname${q}">${NAMES[q]}</div>
-      <select id="ptype${q}">
-        <option value="human">Mensch</option>
-        <option value="ki">Computer</option>
-        <option value="off">Nicht dabei</option>
-      </select>`;
-    block.appendChild(row);
-    row.querySelector('select').value = defaults[q];
+const setupZoneEl = document.getElementById('setupZone');
+const palettePopEl = document.getElementById('palettePop');
+const btnStartEl = document.getElementById('btnStart');
+const setupHintEl = document.getElementById('setupHint');
 
-    // Farbpalette für diesen Spielerplatz
-    const pal = document.createElement('div');
-    pal.className = 'palette';
-    pal.id = 'palette' + q;
-    PALETTE.forEach((c, ci) => {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'colorbtn';
-      b.style.background = c.hex;
-      b.title = c.name;
-      b.addEventListener('click', () => pickColor(q, ci));
-      pal.appendChild(b);
+function buildPalettePop() {
+  palettePopEl.innerHTML = '';
+  PALETTE.forEach((c, ci) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'colorbtn';
+    b.style.background = c.hex;
+    b.title = c.name;
+    b.addEventListener('click', e => {
+      e.stopPropagation();
+      if (paletteSeat >= 0) {
+        setupColors[paletteSeat] = ci;
+        applyColors();
+        refreshStart();
+      }
+      closePalette();
     });
-    block.appendChild(pal);
-    rows.appendChild(block);
-  }
-  refreshSetupColors();
+    palettePopEl.appendChild(b);
+  });
 }
 
-// Farbwahl: Ist die Farbe schon vergeben, tauschen die beiden Plätze –
-// so kann es nie Duplikate geben.
-function pickColor(q, ci) {
-  const other = setupColors.indexOf(ci);
-  if (other >= 0 && other !== q) setupColors[other] = setupColors[q];
-  setupColors[q] = ci;
-  applyColors();
-  refreshSetupColors();
+function openPalette(seat) {
+  paletteSeat = seat;
+  // aktuelle Farbe markieren
+  Array.prototype.forEach.call(palettePopEl.children, (b, ci) =>
+    b.classList.toggle('sel', setupColors[seat] === ci));
+  palettePopEl.classList.remove('hidden');
+  // Neben dem Pool platzieren, zur Brettmitte hin
+  const u = boardCss / 12, M = 20;
+  const pw = palettePopEl.offsetWidth, ph = palettePopEl.offsetHeight;
+  const left = (seat === 0 || seat === 3) ? M + 3.5 * u : M + 8.5 * u - pw;
+  const top = (seat === 0 || seat === 1) ? M + 0.9 * u : M + 11.1 * u - ph;
+  palettePopEl.style.left = left + 'px';
+  palettePopEl.style.top = top + 'px';
 }
 
-function refreshSetupColors() {
-  for (let q = 0; q < 4; q++) {
-    document.getElementById('swatch' + q).style.background = HEX[q];
-    document.getElementById('pname' + q).textContent = NAMES[q];
-    const pal = document.getElementById('palette' + q);
-    Array.prototype.forEach.call(pal.children, (b, ci) =>
-      b.classList.toggle('sel', setupColors[q] === ci));
-  }
+function closePalette() {
+  paletteSeat = -1;
+  palettePopEl.classList.add('hidden');
+}
+
+function cycleType(seat) {
+  const order = ['human', 'ki', 'off'];
+  setupTypes[seat] = order[(order.indexOf(setupTypes[seat]) + 1) % 3];
+  if (setupTypes[seat] === 'off' && paletteSeat === seat) closePalette();
+  refreshStart();
+}
+
+// Start nur, wenn mind. 2 Spieler aktiv sind und alle Farben verschieden
+function setupValid() {
+  const act = [0, 1, 2, 3].filter(s => setupTypes[s] !== 'off');
+  if (act.length < 2) return 'Mindestens 2 Spieler auswählen!';
+  const cols = act.map(s => setupColors[s]);
+  if (new Set(cols).size !== cols.length) return 'Alle Spielerfarben müssen unterschiedlich sein!';
+  return null;
+}
+
+function refreshStart() {
+  const err = setupValid();
+  btnStartEl.disabled = !!err;
+  setupHintEl.textContent = err || ' ';
 }
 
 function startGame() {
-  const types = [];
-  for (let q = 0; q < 4; q++) types.push(document.getElementById('ptype' + q).value);
-  const active = types.filter(t => t !== 'off').length;
-  const hint = document.getElementById('setupHint');
-  if (active < 2) {
-    hint.textContent = 'Es müssen mindestens 2 Spieler mitspielen!';
-    return;
-  }
-  hint.textContent = ' ';
+  if (setupValid()) return;
+  const types = setupTypes.slice();
+  closePalette();
+  setupZoneEl.classList.add('hidden');
 
   game.seq++;
   game.players = types.map(t => ({ type: t, pieces: [-1, -1, -1, -1], finished: false }));
@@ -1423,7 +1491,6 @@ function startGame() {
   particles.length = 0;
   logLines.length = 0;
   logEl.innerHTML = '';
-  document.getElementById('setup').classList.add('hidden');
   document.getElementById('gameover').classList.add('hidden');
 
   // Würfel zurücksetzen und in die Zone legen
@@ -1447,7 +1514,8 @@ function showSetup() {
   shadowEl.classList.add('hidden');
   glowEl.classList.add('hidden');
   document.getElementById('gameover').classList.add('hidden');
-  document.getElementById('setup').classList.remove('hidden');
+  setupZoneEl.classList.remove('hidden');
+  refreshStart();
 }
 
 document.getElementById('btnStart').addEventListener('click', startGame);
@@ -1455,11 +1523,12 @@ document.getElementById('btnAgain').addEventListener('click', showSetup);
 
 // ---------- Los geht's ----------
 applyWood();
-buildSetup();
+buildPalettePop();
 buildCube();
 initGL();
 layoutTable();
 placeDiceInZone();
 cubeEl.style.transform = qToCss(dice.q);
 applyLighting();
+refreshStart();
 requestAnimationFrame(frame);

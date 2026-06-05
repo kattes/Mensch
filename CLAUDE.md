@@ -24,10 +24,17 @@ Kein Build, kein Server, keine Abhängigkeiten — einfach `index.html` im Brows
   `FIELD_POS` (40 Laufwegfelder), `GOAL_POS` (Zielfelder je Farbe), `HOME_POS` (Homebases in den Ecken).
 - **Positionscodierung einer Figur**: `-1` = Homebase, `0–39` = Spielfeld (absolut), `40–43` = Zielfeld 0–3.
 - **Spielerindex = Ecke**: 0 = oben links, 1 = oben rechts, 2 = unten rechts, 3 = unten links.
-  Startfelder: `START = [0, 10, 20, 30]`. Die Farbe je Ecke ist im Setup frei aus `PALETTE`
-  wählbar (8 Farben, u. a. Schwarz statt Rot bei Rot/Grün-Schwäche); `NAMES`/`HEX`/`HEX_DARK`/
-  `HEX_LIGHT` werden in `applyColors()` daraus abgeleitet, Duplikate werden durch Farbtausch
-  zwischen den Plätzen verhindert (`pickColor()`).
+  Startfelder: `START = [0, 10, 20, 30]`. Die Farbe je Ecke ist frei aus `PALETTE` wählbar
+  (8 Farben, u. a. Schwarz statt Rot bei Rot/Grün-Schwäche); `NAMES`/`HEX`/`HEX_DARK`/
+  `HEX_LIGHT` werden in `applyColors()` daraus abgeleitet.
+- **Spielaufbau direkt am Brett** (kein Dialog): In Phase `setup` zeigen die Pools ihre
+  Figuren plus Typ-Symbol (👤/🤖; „Nicht dabei" = leere Homebase). Klick auf eine Figur
+  öffnet das Farb-Popup `#palettePop` neben dem Pool (`openPalette()`), Klick auf die
+  Pool-Fläche schaltet den Typ durch (`cycleType()`: Mensch → Computer → Nicht dabei).
+  Anleitung + Start-Button (`#setupZone`, Leuchtschrift `.glowtext` auf transparentem
+  Grund) liegen in der Würfelzone; `layoutTable()` positioniert sie. Der Start ist nur
+  möglich, wenn ≥ 2 Spieler aktiv sind und alle Farben unterschiedlich (`setupValid()` –
+  Duplikate sind während der Auswahl erlaubt).
 - **Zustand**: zentrales `game`-Objekt mit Phasenautomat
   `setup → roll → move → anim → (roll | nächster Spieler) → … → over`.
 - **Rendering**: Canvas, dauerhafte `requestAnimationFrame`-Schleife; `draw(t)` zeichnet den

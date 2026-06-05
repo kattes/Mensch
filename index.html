@@ -36,15 +36,21 @@
   <button id="mSound" class="btn" disabled title="Demnächst">🔊 Soundeffekte (bald)</button>
 </div>
 
-<!-- Spielerauswahl -->
-<div id="setup" class="overlay">
-  <div class="dialog">
-    <h2>Spieler wählen</h2>
-    <div id="playerRows"></div>
-    <p id="setupHint" class="hint">&nbsp;</p>
-    <button id="btnStart" class="btn primary">Spiel starten</button>
+<!-- Spielaufbau: Anleitung + Start-Button leuchten direkt auf dem Holz
+     (in der Würfelzone). Farben und Spielertyp werden direkt an den
+     Pools auf dem Brett gewählt. -->
+<div id="setupZone">
+  <h2 class="glowtext">Mensch ärgere<br>Dich nicht</h2>
+  <div class="glowtext" id="setupInfo">
+    Figur antippen –<br>Farbe wählen<br><br>
+    Pool antippen –<br>Mensch · Computer · Nicht dabei
   </div>
+  <button id="btnStart" class="btn primary big">Spiel starten</button>
+  <div class="glowtext warn" id="setupHint">&nbsp;</div>
 </div>
+
+<!-- Farbauswahl-Popup, erscheint neben dem angeklickten Pool -->
+<div id="palettePop" class="hidden"></div>
 
 <!-- Spielende -->
 <div id="gameover" class="overlay hidden">
