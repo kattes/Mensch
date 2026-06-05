@@ -40,13 +40,19 @@
      (in der Würfelzone). Farben und Spielertyp werden direkt an den
      Pools auf dem Brett gewählt. -->
 <div id="setupZone">
-  <h2 class="glowtext">Mensch ärgere<br>Dich nicht</h2>
-  <div class="glowtext" id="setupInfo">
-    Figur antippen –<br>Farbe wählen<br><br>
-    Pool antippen –<br>Mensch · Computer · Nicht dabei
+  <div id="setupInner">
+    <h2 class="glowtext">Mensch ärgere<br>Dich nicht</h2>
+    <div class="glowtext info long">
+      Figur antippen –<br>Farbe wählen<br><br>
+      Pool antippen –<br>Mensch · Computer · Nicht dabei
+    </div>
+    <div class="glowtext info short">
+      Figur antippen = Farbe<br>
+      Pool antippen = Spielertyp
+    </div>
+    <button id="btnStart" class="btn primary big">Spiel starten</button>
+    <div class="glowtext warn" id="setupHint">&nbsp;</div>
   </div>
-  <button id="btnStart" class="btn primary big">Spiel starten</button>
-  <div class="glowtext warn" id="setupHint">&nbsp;</div>
 </div>
 
 <!-- Farbauswahl-Popup, erscheint neben dem angeklickten Pool -->

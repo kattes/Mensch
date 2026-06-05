@@ -1255,6 +1255,7 @@ function layoutTable() {
   sz.style.top = diceZone.y0 + 'px';
   sz.style.width = (diceZone.x1 - diceZone.x0) + 'px';
   sz.style.height = (diceZone.y1 - diceZone.y0) + 'px';
+  fitSetupZone();
   if (typeof closePalette === 'function' && game.phase === 'setup') closePalette();
 
   // Menü-Knopf in die Ecke der Würfelzone legen
@@ -1270,6 +1271,20 @@ function layoutTable() {
 
   clampDiceToZone();
   resizeGL();
+}
+
+// Anleitung an die Zonengröße anpassen: schmale Zone → Kurzfassung,
+// und wenn der Inhalt trotzdem nicht passt → herunterskalieren
+function fitSetupZone() {
+  const sz = document.getElementById('setupZone');
+  const inner = document.getElementById('setupInner');
+  if (sz.classList.contains('hidden')) return;
+  const zw = diceZone.x1 - diceZone.x0 - 24;
+  const zh = diceZone.y1 - diceZone.y0 - 24;
+  sz.classList.toggle('compact', zw < 270 || zh < 420);
+  inner.style.transform = '';
+  const ih = inner.offsetHeight;
+  if (ih > zh) inner.style.transform = `scale(${Math.max(0.5, zh / ih)})`;
 }
 
 function unit() { return canvas.width / 12; }
@@ -1643,6 +1658,7 @@ function showSetup() {
   document.getElementById('gameover').classList.add('hidden');
   setupZoneEl.classList.remove('hidden');
   refreshStart();
+  fitSetupZone();
 }
 
 document.getElementById('btnStart').addEventListener('click', startGame);
