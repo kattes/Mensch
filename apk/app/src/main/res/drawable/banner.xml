@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- TV-Banner für die Leanback-Launcher-Kachel (320×180 dp). Zeigt einen
+     Brett-Ausschnitt mit roter Hauptfigur und drei farbigen Gegenspielern. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="320dp"
+    android:height="180dp"
+    android:viewportWidth="320"
+    android:viewportHeight="180">
+
+  <!-- Holz-Hintergrund -->
+  <path android:pathData="M0,0 L320,0 L320,180 L0,180 Z"
+      android:fillColor="#3d2814"/>
+
+  <!-- Cornsilk-Brett-Ausschnitt links -->
+  <path android:pathData="M22,22 L158,22 L158,158 L22,158 Z"
+      android:fillColor="#fff8dc"/>
+
+  <!-- Hauptfigur (Rot) -->
+  <path android:pathData="M92,94 m -34,0 a 34,34 0 1 0 68,0 a 34,34 0 1 0 -68,0"
+      android:fillColor="#38000000" />
+  <path android:pathData="M90,90 m -34,0 a 34,34 0 1 0 68,0 a 34,34 0 1 0 -68,0">
+    <aapt:attr name="android:fillColor">
+      <gradient android:type="radial" android:gradientRadius="40"
+          android:centerX="78" android:centerY="78">
+        <item android:offset="0.0"  android:color="#ffffff" />
+        <item android:offset="0.25" android:color="#d62828" />
+        <item android:offset="1.0"  android:color="#801818" />
+      </gradient>
+    </aapt:attr>
+  </path>
+  <path android:pathData="M90,90 m -34,0 a 34,34 0 1 0 68,0 a 34,34 0 1 0 -68,0"
+      android:strokeColor="#801818" android:strokeWidth="2"
+      android:fillColor="#00000000" />
+
+  <!-- Mitspieler-Figuren rechts (Gelb, Blau, Grün) -->
+  <path android:pathData="M218,58 m -16,0 a 16,16 0 1 0 32,0 a 16,16 0 1 0 -32,0">
+    <aapt:attr name="android:fillColor">
+      <gradient android:type="radial" android:gradientRadius="18"
+          android:centerX="214" android:centerY="54">
+        <item android:offset="0.0"  android:color="#ffffff" />
+        <item android:offset="0.25" android:color="#f2b705" />
+        <item android:offset="1.0"  android:color="#91691A" />
+      </gradient>
+    </aapt:attr>
+  </path>
+  <path android:pathData="M218,58 m -16,0 a 16,16 0 1 0 32,0 a 16,16 0 1 0 -32,0"
+      android:strokeColor="#91691A" android:strokeWidth="1.4"
+      android:fillColor="#00000000" />
+
+  <path android:pathData="M278,90 m -16,0 a 16,16 0 1 0 32,0 a 16,16 0 1 0 -32,0">
+    <aapt:attr name="android:fillColor">
+      <gradient android:type="radial" android:gradientRadius="18"
+          android:centerX="274" android:centerY="86">
+        <item android:offset="0.0"  android:color="#ffffff" />
+        <item android:offset="0.25" android:color="#1f6fd6" />
+        <item android:offset="1.0"  android:color="#13427F" />
+      </gradient>
+    </aapt:attr>
+  </path>
+  <path android:pathData="M278,90 m -16,0 a 16,16 0 1 0 32,0 a 16,16 0 1 0 -32,0"
+      android:strokeColor="#13427F" android:strokeWidth="1.4"
+      android:fillColor="#00000000" />
+
+  <path android:pathData="M236,134 m -16,0 a 16,16 0 1 0 32,0 a 16,16 0 1 0 -32,0">
+    <aapt:attr name="android:fillColor">
+      <gradient android:type="radial" android:gradientRadius="18"
+          android:centerX="232" android:centerY="130">
+        <item android:offset="0.0"  android:color="#ffffff" />
+        <item android:offset="0.25" android:color="#2e933c" />
+        <item android:offset="1.0"  android:color="#1C5824" />
+      </gradient>
+    </aapt:attr>
+  </path>
+  <path android:pathData="M236,134 m -16,0 a 16,16 0 1 0 32,0 a 16,16 0 1 0 -32,0"
+      android:strokeColor="#1C5824" android:strokeWidth="1.4"
+      android:fillColor="#00000000" />
+</vector>

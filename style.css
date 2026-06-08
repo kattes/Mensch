@@ -235,6 +235,17 @@ body {
 .btn.primary { background: #2e933c; font-weight: 600; }
 .btn.primary:hover { background: #36a946; }
 
+/* Fokus-Stile für D-Pad / Tastatur (TV-Bedienung) – nur bei :focus-visible,
+   damit ein Mausklick keinen Outline-Ring hinterlässt. */
+.btn:focus-visible,
+#menuBtn:focus-visible,
+.colorbtn:focus-visible,
+.mLang:focus-within {
+  outline: 3px solid #ffd54f;
+  outline-offset: 2px;
+  box-shadow: 0 0 12px rgba(255,213,79,.6);
+}
+
 /* ---------- Overlays ---------- */
 .overlay {
   position: fixed;

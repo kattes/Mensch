@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Aus game.js / style.css übernommen, damit Launcher-Icon, Banner
+         und der Activity-Hintergrund vor dem WebView-Load farblich passen. -->
+    <color name="cornsilk">#fff8dc</color>
+    <color name="wood">#3d2814</color>
+    <color name="piece_red">#d62828</color>
+    <color name="piece_red_dark">#801818</color>
+</resources>

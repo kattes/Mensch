@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Launcher-Name auf dem Android-/TV-Homescreen. Das Spiel selbst
+         lokalisiert seinen Titel im DOM (siehe TRANSLATIONS in game.js). -->
+    <string name="app_name">Mensch ärgere Dich nicht</string>
+</resources>

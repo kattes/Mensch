@@ -1,0 +1,55 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.kattes.mensch'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.kattes.mensch"
+        // 21 = Android 5.0 Lollipop – deckt alle aktuellen Fire-TV-Stick-
+        // und Google-TV-Geräte ab.
+        minSdk 21
+        targetSdk 34
+        versionCode 11
+        versionName "1.1"
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+}
+
+// ---------------------------------------------------------
+//  Web-Assets aus dem Projekt-Root in src/main/assets ziehen.
+//  Single Source of Truth: index.html / game.js / style.css /
+//  favicon.svg / lib/ liegen oben im Repo; jede Build-Aktion
+//  überschreibt die Assets in diesem Modul, sodass die APK
+//  immer den aktuellen Stand des Web-Spiels enthält.
+// ---------------------------------------------------------
+def webRoot = rootProject.projectDir.parentFile
+def webAssetDir = file("${projectDir}/src/main/assets")
+
+tasks.register('syncWebAssets', Sync) {
+    description = 'Kopiert die Web-Spieldateien aus dem Projekt-Root in assets/.'
+    group = 'build'
+    from(webRoot) {
+        include 'index.html', 'game.js', 'style.css', 'favicon.svg'
+        include 'lib/**'
+    }
+    into webAssetDir
+    // Kein Sync von Backup-/Punkt-Dateien:
+    exclude '**/.*'
+    exclude '**/*~'
+}
+
+// Asset-Sync vor jedem Build, damit man nichts vergisst.
+tasks.named('preBuild').configure { dependsOn 'syncWebAssets' }

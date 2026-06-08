@@ -1,0 +1,12 @@
+.gradle/
+build/
+local.properties
+*.iml
+.idea/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Web-Assets werden vor jedem Build aus dem Projekt-Root synchronisiert
+# (siehe app/build.gradle::syncWebAssets) – nicht ins Git committen.
+app/src/main/assets/

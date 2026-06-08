@@ -1,0 +1,5 @@
+// Top-level Build-Datei. Pluginversionen werden hier zentral festgelegt,
+// damit das app/-Modul sie nur noch referenzieren muss.
+plugins {
+    id 'com.android.application' version '8.2.2' apply false
+}

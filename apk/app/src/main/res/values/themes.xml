@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Fullscreen-Theme ohne ActionBar; Hintergrund in Holzfarbe, damit
+         beim Start kein weißes Aufblitzen vor dem WebView entsteht. -->
+    <style name="AppTheme" parent="android:Theme.Material.NoActionBar.Fullscreen">
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowBackground">@color/wood</item>
+        <item name="android:colorBackground">@color/wood</item>
+    </style>
+</resources>

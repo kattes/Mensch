@@ -521,6 +521,7 @@ function resolveRoll(w) {
   if (moves.length) {
     game.phase = 'move';
     game.movable = moves;
+    dpad.moveIdx = 0;
     updateDiceCue();
     if (isKI(c)) {
       schedule(() => {
@@ -681,6 +682,7 @@ function gameOver() {
     .map((q, i) => `${medals[i]} <span style="display:inline-block;width:.8em;height:.8em;border-radius:50%;background:${HEX[q]};border:2px solid rgba(255,255,255,.6)"></span> <strong>${NAMES[q]}</strong>${game.players[q].type === 'ki' ? aiTag : ''}`)
     .join('<br>');
   document.getElementById('gameover').classList.remove('hidden');
+  if (dpad.active) document.getElementById('btnAgain').focus();
 }
 
 // =========================================================
@@ -754,6 +756,10 @@ function audioInit() {
   if (AC.state === 'suspended') AC.resume();
 }
 document.addEventListener('pointerdown', audioInit, true);
+// Auch auf Tastatur/D-Pad reagieren (TV-Boxes haben keinen Pointer, ohne
+// das würde der AudioContext nie aufgeweckt). Touch-Geräte erreichen
+// hier ohnehin zuerst den pointerdown-Pfad.
+document.addEventListener('keydown', audioInit, true);
 
 // Einzelner Ton mit Frequenzverlauf und exponentiellem Ausklang
 function tone(type, f0, f1, dur, vol, delay = 0) {
@@ -1763,6 +1769,19 @@ function draw(t) {
       ctx.textBaseline = 'middle';
       ctx.fillText(BADGE[setupTypes[q]], bx * u, by * u + u * 0.03);
     }
+    // D-Pad-Fokus auf einem der vier Pools
+    if (dpad.active && dpad.setupIdx >= 0 && dpad.setupIdx <= 3) {
+      const q = dpad.setupIdx;
+      const hp = HOME_POS[q];
+      const cx = (hp[0][0] + hp[3][0]) / 2 * u;
+      const cy = (hp[0][1] + hp[3][1]) / 2 * u;
+      const pulse = 0.5 + 0.5 * Math.sin(t / 250);
+      ctx.lineWidth = u * 0.08;
+      ctx.strokeStyle = `rgba(255,235,170,${0.55 + 0.35 * pulse})`;
+      ctx.beginPath();
+      ctx.roundRect(cx - u * 1.4, cy - u * 1.4, u * 2.8, u * 2.8, u * 0.45);
+      ctx.stroke();
+    }
     drawParticles(u);
     return;
   }
@@ -1791,6 +1810,24 @@ function draw(t) {
         circle(tx * u, ty * u, rField * 1.12);
         ctx.stroke();
       }
+    }
+
+    // D-Pad-Fokus: aktuell gewählte bewegliche Figur extra hervorheben und
+    // Zielfeld dezent markieren – sonst sieht der Spieler nicht, was Enter
+    // gerade auslösen würde.
+    if (dpad.active && game.phase === 'move' && isHuman(game.current) && game.movable.length) {
+      const m = game.movable[Math.min(dpad.moveIdx, game.movable.length - 1)];
+      const [px, py] = pieceXY(game.current, m.piece);
+      const pulse = 0.5 + 0.5 * Math.sin(t / 200);
+      ctx.lineWidth = u * 0.14;
+      ctx.strokeStyle = `rgba(255,255,255,${0.6 + 0.4 * pulse})`;
+      circle(px * u, py * u, rPiece * 1.35);
+      ctx.stroke();
+      const tpos = m.to < 40 ? FIELD_POS[m.to] : GOAL_POS[game.current][m.to - 40];
+      ctx.lineWidth = u * 0.08;
+      ctx.strokeStyle = `rgba(255,255,255,${0.35 + 0.25 * pulse})`;
+      circle(tpos[0] * u, tpos[1] * u, rField * 1.2);
+      ctx.stroke();
     }
   }
 
@@ -2013,10 +2050,221 @@ function showSetup() {
   setupZoneEl.classList.remove('hidden');
   refreshStart();
   fitSetupZone();
+  dpad.setupIdx = 0;
+  dpadSyncHtmlFocus();
 }
 
 document.getElementById('btnStart').addEventListener('click', startGame);
 document.getElementById('btnAgain').addEventListener('click', showSetup);
+
+// =========================================================
+//  D-Pad / Tastatur-Navigation für Fire TV, Google TV und
+//  Desktop. Pfeiltasten verschieben den Fokus, Enter aktiviert.
+//  Lang-Druck auf Enter im Setup öffnet die Farbpalette des
+//  fokussierten Pools. Touch-/Maus-Bedienung läuft daneben
+//  unverändert weiter; die D-Pad-Anzeige (Fokus-Ring) erscheint
+//  erst, nachdem zum ersten Mal eine Pfeiltaste benutzt wurde.
+// =========================================================
+const dpad = {
+  setupIdx: 0,        // 0..3 = Pool, 4 = Start, 5 = Menü-Button
+  paletteIdx: 0,      // 0..7 = Farbe (wenn Palette offen)
+  moveIdx: 0,         // Index in game.movable
+  enterTimer: null,
+  longPressed: false,
+  active: false       // erst nach erster Pfeil-/Enter-Geste true
+};
+const DPAD_LONG_MS = 500;
+
+// Räumliches Nachbar-Graph für die Setup-Phase.
+// Index 0=P0(o.l.) 1=P1(o.r.) 2=P2(u.r.) 3=P3(u.l.) 4=Start 5=Menü
+const SETUP_NEIGH = {
+  ArrowRight: [1,    4,    4,    2,    null, null],
+  ArrowLeft:  [null, 0,    3,    null, 1,    null],
+  ArrowDown:  [3,    2,    null, null, null, 4   ],
+  ArrowUp:    [null, 5,    1,    0,    5,    null]
+};
+
+function dpadActivate() {
+  if (!dpad.active) { dpad.active = true; dpadSyncHtmlFocus(); }
+}
+
+// HTML-Fokus dem gerade gewählten setupIdx-Eintrag nachziehen,
+// damit native :focus-Stile (Start-Button, Menü) sichtbar werden.
+function dpadSyncHtmlFocus() {
+  if (!dpad.active) return;
+  if (game.phase === 'over') {
+    document.getElementById('btnAgain').focus();
+    return;
+  }
+  if (game.phase !== 'setup') return;
+  if (paletteSeat >= 0) return;
+  if (!menuEl.classList.contains('hidden')) return;
+  if (dpad.setupIdx === 4) btnStartEl.focus();
+  else if (dpad.setupIdx === 5) menuBtn.focus();
+  else if (document.activeElement && document.activeElement !== document.body) {
+    document.activeElement.blur();
+  }
+}
+
+function dpadOnKey(e) {
+  const KEYS = ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Enter','Escape'];
+  if (!KEYS.includes(e.key)) return;
+
+  // Echte Eingabefelder (z. B. Sprach-Select) durchlassen
+  const ae = document.activeElement;
+  if (ae && (ae.tagName === 'SELECT' || ae.tagName === 'INPUT')) {
+    if (e.key === 'Escape') menuEl.classList.add('hidden');
+    return;
+  }
+
+  if (e.key === 'Escape') {
+    if (window.dpadBack && window.dpadBack()) e.preventDefault();
+    return;
+  }
+
+  if (e.key === 'Enter') {
+    dpadActivate();
+    if (!e.repeat) dpadEnterDown();
+    e.preventDefault();
+    return;
+  }
+
+  // Pfeiltasten ab hier
+  dpadActivate();
+  e.preventDefault();
+
+  if (paletteSeat >= 0)                                return dpadPaletteArrow(e.key);
+  if (!menuEl.classList.contains('hidden'))            return dpadMenuArrow(e.key);
+  if (game.phase === 'setup')                          return dpadSetupArrow(e.key);
+  if (game.phase === 'move' && isHuman(game.current))  return dpadMoveArrow(e.key);
+}
+
+function dpadOnKeyUp(e) {
+  if (e.key !== 'Enter') return;
+  if (dpad.enterTimer) {
+    clearTimeout(dpad.enterTimer);
+    dpad.enterTimer = null;
+    dpadShortEnter();
+  }
+  dpad.longPressed = false;
+}
+
+function dpadEnterDown() {
+  if (dpad.enterTimer) return;
+  dpad.longPressed = false;
+  dpad.enterTimer = setTimeout(() => {
+    dpad.enterTimer = null;
+    dpad.longPressed = true;
+    dpadLongEnter();
+  }, DPAD_LONG_MS);
+}
+
+function dpadShortEnter() {
+  if (paletteSeat >= 0) return dpadPaletteSelect();
+  if (!menuEl.classList.contains('hidden')) {
+    const a = document.activeElement;
+    if (a && a !== document.body && typeof a.click === 'function') a.click();
+    return;
+  }
+  if (game.phase === 'setup') return dpadSetupAction();
+  if (game.phase === 'roll' && !game.rolling && game.players.length && isHuman(game.current)) {
+    kickRandom();
+    return;
+  }
+  if (game.phase === 'move' && isHuman(game.current) && game.movable.length) {
+    const m = game.movable[Math.min(dpad.moveIdx, game.movable.length - 1)];
+    if (m) executeMove(m);
+    return;
+  }
+  if (game.phase === 'over') document.getElementById('btnAgain').click();
+}
+
+function dpadLongEnter() {
+  if (game.phase !== 'setup' || paletteSeat >= 0) return;
+  if (!menuEl.classList.contains('hidden')) return;
+  if (dpad.setupIdx < 0 || dpad.setupIdx > 3) return;
+  if (setupTypes[dpad.setupIdx] === 'off') return;
+  openPalette(dpad.setupIdx);
+  dpad.paletteIdx = setupColors[dpad.setupIdx];
+  dpadUpdatePaletteFocus();
+}
+
+function dpadSetupArrow(key) {
+  const next = SETUP_NEIGH[key][dpad.setupIdx];
+  if (next != null) { dpad.setupIdx = next; dpadSyncHtmlFocus(); }
+}
+
+function dpadSetupAction() {
+  if (dpad.setupIdx === 4) { btnStartEl.click(); return; }
+  if (dpad.setupIdx === 5) {
+    menuBtn.click();
+    if (!menuEl.classList.contains('hidden')) {
+      const first = menuEl.querySelector('.btn');
+      if (first) first.focus();
+    }
+    return;
+  }
+  cycleType(dpad.setupIdx);
+}
+
+// Palette ist 4×2: horizontal ±1, vertikal ±4
+function dpadPaletteArrow(key) {
+  let n = dpad.paletteIdx;
+  if      (key === 'ArrowLeft'  && n % 4 > 0) n--;
+  else if (key === 'ArrowRight' && n % 4 < 3) n++;
+  else if (key === 'ArrowUp'    && n >= 4)    n -= 4;
+  else if (key === 'ArrowDown'  && n < 4)     n += 4;
+  if (n !== dpad.paletteIdx && n >= 0 && n < PALETTE.length) {
+    dpad.paletteIdx = n;
+    dpadUpdatePaletteFocus();
+  }
+}
+
+function dpadUpdatePaletteFocus() {
+  const btns = palettePopEl.querySelectorAll('.colorbtn');
+  if (btns[dpad.paletteIdx]) btns[dpad.paletteIdx].focus();
+}
+
+function dpadPaletteSelect() {
+  const btns = palettePopEl.querySelectorAll('.colorbtn');
+  if (btns[dpad.paletteIdx]) btns[dpad.paletteIdx].click();
+}
+
+function dpadMoveArrow(key) {
+  if (!game.movable.length) return;
+  let n = dpad.moveIdx;
+  if      (key === 'ArrowRight' || key === 'ArrowDown') n = (n + 1) % game.movable.length;
+  else if (key === 'ArrowLeft'  || key === 'ArrowUp')   n = (n - 1 + game.movable.length) % game.movable.length;
+  dpad.moveIdx = n;
+}
+
+function dpadMenuArrow(key) {
+  if (key !== 'ArrowUp' && key !== 'ArrowDown') return;
+  const items = Array.from(menuEl.querySelectorAll('.btn, select'));
+  if (!items.length) return;
+  let idx = items.indexOf(document.activeElement);
+  if (idx < 0) idx = 0;
+  idx = key === 'ArrowDown'
+    ? Math.min(items.length - 1, idx + 1)
+    : Math.max(0, idx - 1);
+  items[idx].focus();
+}
+
+// Wird vom Android-Wrapper aufgerufen, wenn die TV-Fernbedienung „Zurück"
+// drückt. Schließt Palette/Menü und liefert true, damit die App nicht
+// beendet wird. Sonst false (→ Activity.finish() in MainActivity).
+window.dpadBack = function() {
+  if (paletteSeat >= 0) { closePalette(); return true; }
+  if (!menuEl.classList.contains('hidden')) {
+    menuEl.classList.add('hidden');
+    computeMenuExclusion();
+    return true;
+  }
+  return false;
+};
+
+document.addEventListener('keydown', dpadOnKey);
+document.addEventListener('keyup',   dpadOnKeyUp);
 
 // Anzeigenamen der Sprachen in ihrer eigenen Sprache (Eigennamen).
 const LANG_LABELS = {
