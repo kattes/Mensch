@@ -63,13 +63,19 @@ body {
   will-change: transform;
 }
 
-/* Leuchtring auf dem Tisch: zeigt, welcher (menschliche) Spieler dran ist */
+/* Leuchtring auf dem Tisch: zeigt, welcher (menschliche) Spieler dran ist.
+   Der Verlauf ist ein RING (innen transparent, Peak knapp außerhalb der
+   Würfelkante, außen wieder transparent) – sonst würde der Würfel die
+   hellste Stelle komplett verdecken. */
 #diceGlow {
   position: absolute;
   left: 0; top: 0;
-  width: calc(var(--ds, 80px) * 2);
-  height: calc(var(--ds, 80px) * 2);
-  background: radial-gradient(circle, var(--glow, #ffd54f) 0%, transparent 62%);
+  width: calc(var(--ds, 80px) * 2.4);
+  height: calc(var(--ds, 80px) * 2.4);
+  background: radial-gradient(circle,
+    transparent 25%,
+    var(--glow, #ffd54f) 44%,
+    transparent 72%);
   z-index: 3;
   pointer-events: none;
   opacity: 0;
@@ -79,8 +85,8 @@ body {
 #diceGlow.on { animation: glowPulse 1.1s ease-in-out infinite; }
 
 @keyframes glowPulse {
-  0%, 100% { opacity: .30; }
-  50%      { opacity: .75; }
+  0%, 100% { opacity: .45; }
+  50%      { opacity: .9;  }
 }
 
 #diceShadow.hidden, #diceGlow.hidden { display: none; }
@@ -174,6 +180,28 @@ body {
 
 #menu .btn { text-align: left; }
 #menu .btn:disabled { opacity: .45; cursor: default; }
+
+/* Sprachauswahl (passt sich optisch den Menü-Buttons an) */
+.mLang {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #4a545e;
+  border-radius: 8px;
+  font-size: .95rem;
+  cursor: pointer;
+}
+.mLang select {
+  flex: 1;
+  background: transparent;
+  color: #eee;
+  border: none;
+  font: inherit;
+  cursor: pointer;
+  outline: none;
+}
+.mLang select option { background: #383f46; color: #eee; }
 
 #log {
   display: none;

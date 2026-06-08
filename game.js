@@ -6,6 +6,274 @@
    (FeldPositionen / ZielfeldPositionen aus Main.pas)
    ========================================================= */
 
+// =========================================================
+//  i18n – Übersetzungen für 8 Sprachen.
+//  LANG wird aus navigator.language(s) abgeleitet; ist die
+//  Sprache nicht hinterlegt, fällt t() auf Englisch zurück.
+// =========================================================
+const TRANSLATIONS = {
+  de: {
+    title: 'Mensch ärgere Dich nicht',
+    titleHtml: 'Mensch ärgere<br>Dich nicht',
+    instrLong: 'Figur antippen –<br>Farbe wählen<br><br>Pool antippen –<br>Mensch · Computer · Nicht dabei',
+    instrShort: 'Figur antippen = Farbe<br>Pool antippen = Spielertyp',
+    btnStart: 'Spiel starten',
+    gameOver: 'Spiel beendet!',
+    btnAgain: 'Nochmal spielen',
+    menuAria: 'Menü',
+    menuNew: '🔄 Neues Spiel',
+    menuLogShow: '📜 Protokoll anzeigen',
+    menuLogHide: '📜 Protokoll ausblenden',
+    menuSoundOn: '🔊 Sound: an',
+    menuSoundOff: '🔇 Sound: aus',
+    computer: 'Computer',
+    capture: '💥 {a} schlägt {b} – Mensch ärgere Dich nicht!',
+    penalty: '⚖️ Strafe! {a} hätte schlagen können – die säumige Figur fliegt raus!',
+    bringOut: '{a} bringt eine Figur ins Spiel.',
+    goal: '{a} zieht ins Ziel.',
+    finished: '🏁 {a} hat alle Figuren im Ziel!',
+    cannotMove: '{a} kann nicht ziehen.',
+    rollAgain: '{a} darf nochmal würfeln (6).',
+    sixNoMove: '{a} würfelt 6, kann aber nicht ziehen – nochmal!',
+    newGame: 'Neues Spiel gestartet. Viel Glück!',
+    errMinPlayers: 'Mindestens 2 Spieler auswählen!',
+    errColors: 'Alle Spielerfarben müssen unterschiedlich sein!',
+    colorRed: 'Rot', colorGreen: 'Grün', colorYellow: 'Gelb', colorBlue: 'Blau',
+    colorBlack: 'Schwarz', colorViolet: 'Violett', colorOrange: 'Orange', colorTurquoise: 'Türkis'
+  },
+  en: {
+    title: "Don't Get Angry",
+    titleHtml: "Don't Get<br>Angry",
+    instrLong: 'Tap a piece –<br>choose a color<br><br>Tap a pool –<br>Human · Computer · Out',
+    instrShort: 'Tap piece = color<br>Tap pool = player type',
+    btnStart: 'Start game',
+    gameOver: 'Game over!',
+    btnAgain: 'Play again',
+    menuAria: 'Menu',
+    menuNew: '🔄 New game',
+    menuLogShow: '📜 Show log',
+    menuLogHide: '📜 Hide log',
+    menuSoundOn: '🔊 Sound: on',
+    menuSoundOff: '🔇 Sound: off',
+    computer: 'Computer',
+    capture: "💥 {a} captures {b} – don't get angry!",
+    penalty: '⚖️ Penalty! {a} could have captured – the negligent piece flies home!',
+    bringOut: '{a} brings a piece into play.',
+    goal: '{a} moves into the goal.',
+    finished: '🏁 {a} has all pieces in the goal!',
+    cannotMove: '{a} cannot move.',
+    rollAgain: '{a} may roll again (6).',
+    sixNoMove: '{a} rolls a 6 but cannot move – roll again!',
+    newGame: 'New game started. Good luck!',
+    errMinPlayers: 'Select at least 2 players!',
+    errColors: 'All players must have different colors!',
+    colorRed: 'Red', colorGreen: 'Green', colorYellow: 'Yellow', colorBlue: 'Blue',
+    colorBlack: 'Black', colorViolet: 'Violet', colorOrange: 'Orange', colorTurquoise: 'Turquoise'
+  },
+  es: {
+    title: 'No te enfades',
+    titleHtml: 'No te<br>enfades',
+    instrLong: 'Toca una ficha –<br>elige un color<br><br>Toca un grupo –<br>Humano · Ordenador · Fuera',
+    instrShort: 'Tocar ficha = color<br>Tocar grupo = tipo de jugador',
+    btnStart: 'Empezar partida',
+    gameOver: '¡Fin de la partida!',
+    btnAgain: 'Jugar otra vez',
+    menuAria: 'Menú',
+    menuNew: '🔄 Nueva partida',
+    menuLogShow: '📜 Mostrar registro',
+    menuLogHide: '📜 Ocultar registro',
+    menuSoundOn: '🔊 Sonido: activado',
+    menuSoundOff: '🔇 Sonido: desactivado',
+    computer: 'Ordenador',
+    capture: '💥 ¡{a} captura a {b} – no te enfades!',
+    penalty: '⚖️ ¡Penalización! {a} podía capturar – ¡la ficha morosa vuelve a casa!',
+    bringOut: '{a} pone una ficha en juego.',
+    goal: '{a} entra en la meta.',
+    finished: '🏁 ¡{a} tiene todas sus fichas en la meta!',
+    cannotMove: '{a} no puede mover.',
+    rollAgain: '{a} tira otra vez (6).',
+    sixNoMove: '{a} saca un 6 pero no puede mover – ¡otra vez!',
+    newGame: '¡Nueva partida! ¡Buena suerte!',
+    errMinPlayers: '¡Elige al menos 2 jugadores!',
+    errColors: '¡Todos los jugadores deben tener colores distintos!',
+    colorRed: 'Rojo', colorGreen: 'Verde', colorYellow: 'Amarillo', colorBlue: 'Azul',
+    colorBlack: 'Negro', colorViolet: 'Violeta', colorOrange: 'Naranja', colorTurquoise: 'Turquesa'
+  },
+  it: {
+    title: "Non t'arrabbiare",
+    titleHtml: "Non<br>t'arrabbiare",
+    instrLong: 'Tocca una pedina –<br>scegli il colore<br><br>Tocca un gruppo –<br>Umano · Computer · Escluso',
+    instrShort: 'Tocca pedina = colore<br>Tocca gruppo = tipo',
+    btnStart: 'Inizia partita',
+    gameOver: 'Partita finita!',
+    btnAgain: 'Gioca ancora',
+    menuAria: 'Menu',
+    menuNew: '🔄 Nuova partita',
+    menuLogShow: '📜 Mostra registro',
+    menuLogHide: '📜 Nascondi registro',
+    menuSoundOn: '🔊 Audio: attivo',
+    menuSoundOff: '🔇 Audio: disattivato',
+    computer: 'Computer',
+    capture: "💥 {a} mangia {b} – non t'arrabbiare!",
+    penalty: '⚖️ Penalità! {a} poteva mangiare – la pedina negligente torna a casa!',
+    bringOut: '{a} mette una pedina in gioco.',
+    goal: "{a} entra all'arrivo.",
+    finished: "🏁 {a} ha tutte le pedine all'arrivo!",
+    cannotMove: '{a} non può muovere.',
+    rollAgain: '{a} tira di nuovo (6).',
+    sixNoMove: '{a} fa 6 ma non può muovere – ancora!',
+    newGame: 'Nuova partita iniziata. Buona fortuna!',
+    errMinPlayers: 'Seleziona almeno 2 giocatori!',
+    errColors: 'Tutti i giocatori devono avere colori diversi!',
+    colorRed: 'Rosso', colorGreen: 'Verde', colorYellow: 'Giallo', colorBlue: 'Blu',
+    colorBlack: 'Nero', colorViolet: 'Viola', colorOrange: 'Arancione', colorTurquoise: 'Turchese'
+  },
+  pt: {
+    title: 'Não te zangues',
+    titleHtml: 'Não te<br>zangues',
+    instrLong: 'Toca numa peça –<br>escolhe a cor<br><br>Toca num grupo –<br>Humano · Computador · Fora',
+    instrShort: 'Tocar peça = cor<br>Tocar grupo = tipo',
+    btnStart: 'Começar jogo',
+    gameOver: 'Fim do jogo!',
+    btnAgain: 'Jogar novamente',
+    menuAria: 'Menu',
+    menuNew: '🔄 Novo jogo',
+    menuLogShow: '📜 Mostrar registo',
+    menuLogHide: '📜 Esconder registo',
+    menuSoundOn: '🔊 Som: ligado',
+    menuSoundOff: '🔇 Som: desligado',
+    computer: 'Computador',
+    capture: '💥 {a} captura {b} – não te zangues!',
+    penalty: '⚖️ Penalidade! {a} podia capturar – a peça desleixada volta para casa!',
+    bringOut: '{a} põe uma peça em jogo.',
+    goal: '{a} entra na meta.',
+    finished: '🏁 {a} tem todas as peças na meta!',
+    cannotMove: '{a} não pode mover.',
+    rollAgain: '{a} joga de novo (6).',
+    sixNoMove: '{a} tira 6 mas não pode mover – outra vez!',
+    newGame: 'Novo jogo iniciado. Boa sorte!',
+    errMinPlayers: 'Seleciona pelo menos 2 jogadores!',
+    errColors: 'Todos os jogadores precisam de cores diferentes!',
+    colorRed: 'Vermelho', colorGreen: 'Verde', colorYellow: 'Amarelo', colorBlue: 'Azul',
+    colorBlack: 'Preto', colorViolet: 'Violeta', colorOrange: 'Laranja', colorTurquoise: 'Turquesa'
+  },
+  fr: {
+    title: 'Ne te fâche pas',
+    titleHtml: 'Ne te<br>fâche pas',
+    instrLong: 'Touche un pion –<br>choisis une couleur<br><br>Touche un groupe –<br>Humain · Ordinateur · Hors-jeu',
+    instrShort: 'Toucher pion = couleur<br>Toucher groupe = type',
+    btnStart: 'Commencer la partie',
+    gameOver: 'Partie terminée !',
+    btnAgain: 'Rejouer',
+    menuAria: 'Menu',
+    menuNew: '🔄 Nouvelle partie',
+    menuLogShow: '📜 Afficher le journal',
+    menuLogHide: '📜 Masquer le journal',
+    menuSoundOn: '🔊 Son : activé',
+    menuSoundOff: '🔇 Son : désactivé',
+    computer: 'Ordinateur',
+    capture: '💥 {a} capture {b} – ne te fâche pas !',
+    penalty: '⚖️ Pénalité ! {a} aurait pu capturer – le pion fautif rentre à la maison !',
+    bringOut: '{a} met un pion en jeu.',
+    goal: "{a} entre à l'arrivée.",
+    finished: "🏁 {a} a tous ses pions à l'arrivée !",
+    cannotMove: '{a} ne peut pas jouer.',
+    rollAgain: '{a} relance le dé (6).',
+    sixNoMove: '{a} fait 6 mais ne peut pas jouer – on relance !',
+    newGame: 'Nouvelle partie lancée. Bonne chance !',
+    errMinPlayers: 'Choisis au moins 2 joueurs !',
+    errColors: 'Tous les joueurs doivent avoir des couleurs différentes !',
+    colorRed: 'Rouge', colorGreen: 'Vert', colorYellow: 'Jaune', colorBlue: 'Bleu',
+    colorBlack: 'Noir', colorViolet: 'Violet', colorOrange: 'Orange', colorTurquoise: 'Turquoise'
+  },
+  pl: {
+    title: 'Nie denerwuj się',
+    titleHtml: 'Nie<br>denerwuj się',
+    instrLong: 'Stuknij pionek –<br>wybierz kolor<br><br>Stuknij pulę –<br>Człowiek · Komputer · Poza grą',
+    instrShort: 'Pionek = kolor<br>Pula = typ gracza',
+    btnStart: 'Rozpocznij grę',
+    gameOver: 'Koniec gry!',
+    btnAgain: 'Zagraj jeszcze raz',
+    menuAria: 'Menu',
+    menuNew: '🔄 Nowa gra',
+    menuLogShow: '📜 Pokaż protokół',
+    menuLogHide: '📜 Ukryj protokół',
+    menuSoundOn: '🔊 Dźwięk: wł.',
+    menuSoundOff: '🔇 Dźwięk: wył.',
+    computer: 'Komputer',
+    capture: '💥 {a} zbija {b} – nie denerwuj się!',
+    penalty: '⚖️ Kara! {a} mógł zbić – zaniedbany pionek wraca do bazy!',
+    bringOut: '{a} wprowadza pionek do gry.',
+    goal: '{a} wchodzi do mety.',
+    finished: '🏁 {a} ma wszystkie pionki w mecie!',
+    cannotMove: '{a} nie może wykonać ruchu.',
+    rollAgain: '{a} rzuca ponownie (6).',
+    sixNoMove: '{a} wyrzuca 6, ale nie może ruszać – jeszcze raz!',
+    newGame: 'Nowa gra rozpoczęta. Powodzenia!',
+    errMinPlayers: 'Wybierz co najmniej 2 graczy!',
+    errColors: 'Wszyscy gracze muszą mieć różne kolory!',
+    colorRed: 'Czerwony', colorGreen: 'Zielony', colorYellow: 'Żółty', colorBlue: 'Niebieski',
+    colorBlack: 'Czarny', colorViolet: 'Fioletowy', colorOrange: 'Pomarańczowy', colorTurquoise: 'Turkusowy'
+  },
+  ar: {
+    title: 'لا تغضب',
+    titleHtml: 'لا<br>تغضب',
+    instrLong: 'اضغط على قطعة –<br>اختر اللون<br><br>اضغط على مجموعة –<br>إنسان · حاسوب · خارج',
+    instrShort: 'قطعة = لون<br>مجموعة = نوع اللاعب',
+    btnStart: 'ابدأ اللعبة',
+    gameOver: 'انتهت اللعبة!',
+    btnAgain: 'العب مرة أخرى',
+    menuAria: 'القائمة',
+    menuNew: '🔄 لعبة جديدة',
+    menuLogShow: '📜 عرض السجل',
+    menuLogHide: '📜 إخفاء السجل',
+    menuSoundOn: '🔊 الصوت: مفعل',
+    menuSoundOff: '🔇 الصوت: مغلق',
+    computer: 'حاسوب',
+    capture: '💥 {a} يضرب {b} – لا تغضب!',
+    penalty: '⚖️ عقوبة! كان بإمكان {a} الضرب – القطعة المهملة تعود إلى البيت!',
+    bringOut: '{a} يُدخل قطعة إلى اللعب.',
+    goal: '{a} يدخل المرمى.',
+    finished: '🏁 {a} وصل بجميع قطعه إلى المرمى!',
+    cannotMove: '{a} لا يستطيع التحرك.',
+    rollAgain: '{a} يرمي مرة أخرى (6).',
+    sixNoMove: '{a} يرمي 6 لكنه لا يستطيع التحرك – مرة أخرى!',
+    newGame: 'بدأت لعبة جديدة. حظاً سعيداً!',
+    errMinPlayers: 'اختر لاعبين اثنين على الأقل!',
+    errColors: 'يجب أن يكون لكل لاعب لون مختلف!',
+    colorRed: 'أحمر', colorGreen: 'أخضر', colorYellow: 'أصفر', colorBlue: 'أزرق',
+    colorBlack: 'أسود', colorViolet: 'بنفسجي', colorOrange: 'برتقالي', colorTurquoise: 'فيروزي'
+  }
+};
+
+// Sprache ermitteln. Reihenfolge: URL-Parameter ?lang=xx, dann gespeicherte
+// Auswahl (localStorage), dann Browser-Sprache, dann Englisch als Default.
+// Auf zweistelligen Code reduziert (z. B. "en-US" → "en").
+const LANG = (() => {
+  const supported = Object.keys(TRANSLATIONS);
+  const norm = c => (c || '').toLowerCase().split('-')[0];
+  const fromUrl = new URLSearchParams(location.search).get('lang');
+  const fromStore = (() => { try { return localStorage.getItem('lang'); } catch (_) { return null; } })();
+  const candidates = [fromUrl, fromStore, navigator.language, ...(navigator.languages || [])];
+  for (const c of candidates) {
+    const base = norm(c);
+    if (supported.includes(base)) return base;
+  }
+  return 'en';
+})();
+
+// Übersetzungsschlüssel auflösen; {placeholder} werden aus params ersetzt.
+// Fehlt der Schlüssel in der gewählten Sprache, wird Englisch verwendet.
+function t(key, params) {
+  let s = TRANSLATIONS[LANG][key];
+  if (s == null) s = TRANSLATIONS.en[key];
+  if (s == null) return key;
+  if (params) {
+    for (const k in params) s = s.split('{' + k + '}').join(params[k]);
+  }
+  return s;
+}
+
 // ---------- Brettgeometrie (12x12-Raster, wie im Delphi-Original) ----------
 const FIELD_POS = [
   [1,5],[2,5],[3,5],[4,5],[5,5],      //  0– 4
@@ -38,15 +306,17 @@ const START = [0, 10, 20, 30];
 // Jeder Spielerplatz (Ecke) kann eine beliebige Palettenfarbe erhalten –
 // z. B. Schwarz statt Rot für Menschen mit Rot/Grün-Schwäche.
 // Hell-/Dunkelvarianten werden automatisch aus der Grundfarbe berechnet.
+// Die Farbnamen kommen aus den Übersetzungen (colorRed, colorGreen, …),
+// damit die UI auch in anderen Sprachen die richtige Bezeichnung zeigt.
 const PALETTE = [
-  { name: 'Rot',     hex: '#d62828' },
-  { name: 'Grün',    hex: '#2e933c' },
-  { name: 'Gelb',    hex: '#f2b705' },
-  { name: 'Blau',    hex: '#1f6fd6' },
-  { name: 'Schwarz', hex: '#2f2f2f' },
-  { name: 'Violett', hex: '#8e44ad' },
-  { name: 'Orange',  hex: '#e8740c' },
-  { name: 'Türkis',  hex: '#0f9b8e' }
+  { key: 'colorRed',       hex: '#d62828' },
+  { key: 'colorGreen',     hex: '#2e933c' },
+  { key: 'colorYellow',    hex: '#f2b705' },
+  { key: 'colorBlue',      hex: '#1f6fd6' },
+  { key: 'colorBlack',     hex: '#2f2f2f' },
+  { key: 'colorViolet',    hex: '#8e44ad' },
+  { key: 'colorOrange',    hex: '#e8740c' },
+  { key: 'colorTurquoise', hex: '#0f9b8e' }
 ];
 
 // Mischt zwei Hexfarben, t = Anteil der zweiten Farbe (0..1)
@@ -66,7 +336,7 @@ const setupColors = [0, 1, 2, 3];
 let NAMES = [], HEX = [], HEX_DARK = [], HEX_LIGHT = [];
 
 function applyColors() {
-  NAMES     = setupColors.map(i => PALETTE[i].name);
+  NAMES     = setupColors.map(i => t(PALETTE[i].key));
   HEX       = setupColors.map(i => PALETTE[i].hex);
   HEX_DARK  = setupColors.map(i => mixHex(PALETTE[i].hex, '#000000', 0.4));
   HEX_LIGHT = setupColors.map(i => mixHex(PALETTE[i].hex, '#ffffff', 0.78));
@@ -266,7 +536,7 @@ function resolveRoll(w) {
     // Eine 6 erlaubt immer einen weiteren Wurf
     game.phase = 'roll';
     game.rollsLeft = 1;
-    addLog(`${NAMES[c]} würfelt 6, kann aber nicht ziehen – nochmal!`);
+    addLog(t('sixNoMove', { a: NAMES[c] }));
     updateDiceCue();
     if (isKI(c)) schedule(kickRandom, 800);
     return;
@@ -278,7 +548,7 @@ function resolveRoll(w) {
     updateDiceCue();
     if (isKI(c)) schedule(kickRandom, 700);
   } else {
-    addLog(`${NAMES[c]} kann nicht ziehen.`);
+    addLog(t('cannotMove', { a: NAMES[c] }));
     game.phase = 'anim'; // Eingaben kurz sperren
     updateDiceCue();
     schedule(advancePlayer, 1000);
@@ -336,7 +606,7 @@ function finalizeMove(m) {
       spawnExplosion(ex, ey, HEX[hit.player]);
       sfxBoom();
       game.players[hit.player].pieces[hit.piece] = -1;
-      addLog(`💥 ${NAMES[c]} schlägt ${NAMES[hit.player]} – Mensch ärgere Dich nicht!`);
+      addLog(t('capture', { a: NAMES[c], b: NAMES[hit.player] }));
       hasCaptured = true;
     }
   }
@@ -350,12 +620,12 @@ function finalizeMove(m) {
     spawnExplosion(px, py, HEX[c]);
     sfxBoom();
     game.players[c].pieces[pun] = -1;
-    addLog(`⚖️ Strafe! ${NAMES[c]} hätte schlagen können – die säumige Figur fliegt raus!`);
+    addLog(t('penalty', { a: NAMES[c] }));
   }
   game.captureList = [];
 
-  if (m.type === 'out') { sfxPop(); addLog(`${NAMES[c]} bringt eine Figur ins Spiel.`); }
-  if (m.type === 'goal') { sfxGoal(); addLog(`${NAMES[c]} zieht ins Ziel.`); }
+  if (m.type === 'out')  { sfxPop();  addLog(t('bringOut', { a: NAMES[c] })); }
+  if (m.type === 'goal') { sfxGoal(); addLog(t('goal',     { a: NAMES[c] })); }
 
   // Fertig?
   const p = game.players[c];
@@ -363,7 +633,7 @@ function finalizeMove(m) {
     p.finished = true;
     game.ranking.push(c);
     sfxFanfare();
-    addLog(`🏁 ${NAMES[c]} hat alle Figuren im Ziel!`);
+    addLog(t('finished', { a: NAMES[c] }));
   }
 
   // Spielende, wenn höchstens ein aktiver Spieler übrig ist
@@ -374,7 +644,7 @@ function finalizeMove(m) {
   }
 
   if (!p.finished && game.dice === 6) {
-    addLog(`${NAMES[c]} darf nochmal würfeln (6).`);
+    addLog(t('rollAgain', { a: NAMES[c] }));
     startTurn(); // gleicher Spieler
   } else {
     advancePlayer();
@@ -406,8 +676,9 @@ function gameOver() {
   game.rolling = false;
   updateDiceCue();
   const medals = ['🥇', '🥈', '🥉', '4.'];
+  const aiTag = ' (' + t('computer') + ')';
   document.getElementById('ranking').innerHTML = game.ranking
-    .map((q, i) => `${medals[i]} <span style="display:inline-block;width:.8em;height:.8em;border-radius:50%;background:${HEX[q]};border:2px solid rgba(255,255,255,.6)"></span> <strong>${NAMES[q]}</strong>${game.players[q].type === 'ki' ? ' (Computer)' : ''}`)
+    .map((q, i) => `${medals[i]} <span style="display:inline-block;width:.8em;height:.8em;border-radius:50%;background:${HEX[q]};border:2px solid rgba(255,255,255,.6)"></span> <strong>${NAMES[q]}</strong>${game.players[q].type === 'ki' ? aiTag : ''}`)
     .join('<br>');
   document.getElementById('gameover').classList.remove('hidden');
 }
@@ -564,7 +835,7 @@ function sfxFanfare() {             // Spieler ist fertig / Spielende
 // Menüpunkt: Sound an/aus (gemerkt in localStorage)
 const mSoundEl = document.getElementById('mSound');
 function refreshSoundBtn() {
-  mSoundEl.textContent = soundOn ? '🔊 Sound: an' : '🔇 Sound: aus';
+  mSoundEl.textContent = soundOn ? t('menuSoundOn') : t('menuSoundOff');
 }
 mSoundEl.addEventListener('click', () => {
   soundOn = !soundOn;
@@ -778,6 +1049,76 @@ function clampDiceToZone() {
   const h = ds / 2 + 2;
   dice.x = Math.min(diceZone.x1 - h, Math.max(diceZone.x0 + h, dice.x));
   dice.y = Math.min(diceZone.y1 - h, Math.max(diceZone.y0 + h, dice.y));
+  pushOutOfMenu(false);
+}
+
+// =========================================================
+//  Sperrbereich um den Hamburger-Button (und das offene Menü):
+//  Der Würfel darf nie unter dem Menü liegen und prallt davon ab.
+// =========================================================
+let menuExclusion = null;
+
+function computeMenuExclusion() {
+  if (!boardCss) { menuExclusion = null; return; }
+  const W = window.innerWidth, H = window.innerHeight;
+  const landscape = W >= H;
+  const pad = ds / 2 + 4;
+
+  // Button-Rechteck aus den in layoutTable() vergebenen 20-px-Abständen
+  // ableiten (CSS-Größe 46×46). Eigenständig statt getBoundingClientRect,
+  // damit der Wert direkt nach Layout-Änderungen stimmt.
+  const btnSize = 46, m = 20;
+  let bx0 = W - m - btnSize, by0, bx1 = W - m, by1;
+  if (landscape) { by0 = m; by1 = m + btnSize; }
+  else           { by1 = H - m; by0 = by1 - btnSize; }
+
+  // Wenn das Menü sichtbar ist, dessen aktuell gerendertes Rechteck
+  // dazunehmen (Höhe variiert mit eingeklapptem/aufgeklapptem Protokoll).
+  let x0 = bx0, y0 = by0, x1 = bx1, y1 = by1;
+  if (menuEl && !menuEl.classList.contains('hidden')) {
+    const r = menuEl.getBoundingClientRect();
+    if (r.width > 0) {
+      x0 = Math.min(x0, r.left);
+      y0 = Math.min(y0, r.top);
+      x1 = Math.max(x1, r.right);
+      y1 = Math.max(y1, r.bottom);
+    }
+  }
+
+  menuExclusion = {
+    x0: x0 - pad, y0: y0 - pad, x1: x1 + pad, y1: y1 + pad,
+    // Welche Seiten des Sperrbereichs zeigen in die Würfelzone hinein?
+    // Der Hamburger sitzt immer in der rechten Ecke – offen sind also
+    // „links" und je nach Orientierung „unten" (quer) oder „oben" (hoch).
+    openSides: landscape ? ['left', 'bottom'] : ['left', 'top']
+  };
+}
+
+// Würfel aus dem Sperrbereich herausschieben. reflect=true reflektiert
+// dabei die Geschwindigkeit (Abpraller). Rückgabe: true, wenn der Würfel
+// vorher drin lag.
+function pushOutOfMenu(reflect) {
+  const r = menuExclusion;
+  if (!r) return false;
+  if (dice.x <= r.x0 || dice.x >= r.x1 || dice.y <= r.y0 || dice.y >= r.y1) return false;
+
+  // Kürzesten Weg zur nächsten offenen Seite suchen
+  const opts = [];
+  if (r.openSides.includes('left'))   opts.push({ side: 'left',   d: dice.x - r.x0 });
+  if (r.openSides.includes('right'))  opts.push({ side: 'right',  d: r.x1 - dice.x });
+  if (r.openSides.includes('top'))    opts.push({ side: 'top',    d: dice.y - r.y0 });
+  if (r.openSides.includes('bottom')) opts.push({ side: 'bottom', d: r.y1 - dice.y });
+  opts.sort((a, b) => a.d - b.d);
+  const o = opts[0];
+  if (!o) return false;
+  const R = 0.72;
+  switch (o.side) {
+    case 'left':   dice.x = r.x0; if (reflect) dice.vx = -Math.abs(dice.vx) * R; break;
+    case 'right':  dice.x = r.x1; if (reflect) dice.vx =  Math.abs(dice.vx) * R; break;
+    case 'top':    dice.y = r.y0; if (reflect) dice.vy = -Math.abs(dice.vy) * R; break;
+    case 'bottom': dice.y = r.y1; if (reflect) dice.vy =  Math.abs(dice.vy) * R; break;
+  }
+  return true;
 }
 
 function placeDiceInZone() {
@@ -838,6 +1179,9 @@ function updateDice(dt) {
     if (dice.x > diceZone.x1 - h) { dice.x = diceZone.x1 - h; dice.vx = -Math.abs(dice.vx) * R; bounced = true; }
     if (dice.y < diceZone.y0 + h) { dice.y = diceZone.y0 + h; dice.vy =  Math.abs(dice.vy) * R; bounced = true; }
     if (dice.y > diceZone.y1 - h) { dice.y = diceZone.y1 - h; dice.vy = -Math.abs(dice.vy) * R; bounced = true; }
+
+    // Zusätzliche Bande: Hamburger-Menü-Sperrbereich
+    if (pushOutOfMenu(true)) bounced = true;
 
     const speed = Math.hypot(dice.vx, dice.vy);
     if (bounced) sfxKnock(speed / (9 * u));
@@ -906,8 +1250,8 @@ function updateDice(dt) {
     `scale(${1 + dice.z / (2.5 * ds)})`;
   shadowEl.style.opacity = String(Math.max(0.3, 0.85 - dice.z / (2 * ds)));
 
-  // Leuchtring zentriert unter dem Würfel
-  glowEl.style.transform = `translate(${dice.x - ds}px, ${dice.y - ds}px)`;
+  // Leuchtring zentriert unter dem Würfel (Größe 2.4 × ds, siehe style.css)
+  glowEl.style.transform = `translate(${dice.x - ds * 1.2}px, ${dice.y - ds * 1.2}px)`;
 }
 
 // ---- Würfel anstupsen / schleudern ----
@@ -1269,6 +1613,7 @@ function layoutTable() {
     menuEl.style.top = '';       menuEl.style.bottom = '76px';
   }
 
+  computeMenuExclusion();
   clampDiceToZone();
   resizeGL();
 }
@@ -1518,12 +1863,17 @@ window.addEventListener('resize', layoutTable);
 menuBtn.addEventListener('click', e => {
   e.stopPropagation();
   menuEl.classList.toggle('hidden');
+  // Sperrbereich aktualisieren, damit ein liegender Würfel vor dem
+  // gerade geöffneten Menü ausweichen kann.
+  computeMenuExclusion();
+  if (dice.state === 'idle') { pushOutOfMenu(false); clampDiceToZone(); }
 });
 
 document.addEventListener('pointerdown', e => {
   if (!menuEl.classList.contains('hidden') &&
       !menuEl.contains(e.target) && e.target !== menuBtn && !menuBtn.contains(e.target)) {
     menuEl.classList.add('hidden');
+    computeMenuExclusion();
   }
   // Farb-Popup schließen bei Klick daneben (Canvas regelt sich selbst)
   if (paletteSeat >= 0 && !palettePopEl.contains(e.target) && e.target !== canvas) {
@@ -1533,13 +1883,17 @@ document.addEventListener('pointerdown', e => {
 
 document.getElementById('mNew').addEventListener('click', () => {
   menuEl.classList.add('hidden');
+  computeMenuExclusion();
   showSetup();
 });
 
 document.getElementById('mLog').addEventListener('click', () => {
   const open = logEl.classList.toggle('open');
   document.getElementById('mLog').textContent =
-    open ? '📜 Protokoll ausblenden' : '📜 Protokoll anzeigen';
+    open ? t('menuLogHide') : t('menuLogShow');
+  // Höhe des Menüs kann sich durch das Protokoll geändert haben
+  computeMenuExclusion();
+  if (dice.state === 'idle') { pushOutOfMenu(false); clampDiceToZone(); }
 });
 
 // =========================================================
@@ -1607,9 +1961,9 @@ function cycleType(seat) {
 // Start nur, wenn mind. 2 Spieler aktiv sind und alle Farben verschieden
 function setupValid() {
   const act = [0, 1, 2, 3].filter(s => setupTypes[s] !== 'off');
-  if (act.length < 2) return 'Mindestens 2 Spieler auswählen!';
+  if (act.length < 2) return t('errMinPlayers');
   const cols = act.map(s => setupColors[s]);
-  if (new Set(cols).size !== cols.length) return 'Alle Spielerfarben müssen unterschiedlich sein!';
+  if (new Set(cols).size !== cols.length) return t('errColors');
   return null;
 }
 
@@ -1643,8 +1997,8 @@ function startGame() {
   shadowEl.classList.remove('hidden');
   glowEl.classList.remove('hidden');
 
-  game.current = types.findIndex(t => t !== 'off');
-  addLog('Neues Spiel gestartet. Viel Glück!');
+  game.current = types.findIndex(x => x !== 'off');
+  addLog(t('newGame'));
   startTurn();
 }
 
@@ -1664,7 +2018,51 @@ function showSetup() {
 document.getElementById('btnStart').addEventListener('click', startGame);
 document.getElementById('btnAgain').addEventListener('click', showSetup);
 
+// Anzeigenamen der Sprachen in ihrer eigenen Sprache (Eigennamen).
+const LANG_LABELS = {
+  de: 'Deutsch', en: 'English', es: 'Español', it: 'Italiano',
+  pt: 'Português', fr: 'Français', pl: 'Polski', ar: 'العربية'
+};
+
+// Statische UI-Texte einmal nach Sprache befüllen. Dynamische Texte
+// (Log, Sound-/Protokoll-Buttons, Hinweise) gehen über t() direkt
+// an der Stelle, an der sie gesetzt werden.
+function applyI18n() {
+  document.documentElement.lang = LANG;
+  if (LANG === 'ar') document.documentElement.dir = 'rtl';
+  document.title = t('title');
+  document.getElementById('menuBtn').setAttribute('aria-label', t('menuAria'));
+  document.getElementById('mNew').textContent = t('menuNew');
+  document.getElementById('mLog').textContent = t('menuLogShow');
+  document.getElementById('setupTitle').innerHTML = t('titleHtml');
+  document.getElementById('instrLong').innerHTML = t('instrLong');
+  document.getElementById('instrShort').innerHTML = t('instrShort');
+  document.getElementById('btnStart').textContent = t('btnStart');
+  document.getElementById('gameOverTitle').textContent = t('gameOver');
+  document.getElementById('btnAgain').textContent = t('btnAgain');
+
+  // Sprachauswahl im Menü befüllen und auf aktuelle Sprache setzen
+  const sel = document.getElementById('mLang');
+  if (sel && !sel.options.length) {
+    Object.keys(TRANSLATIONS).forEach(code => {
+      const o = document.createElement('option');
+      o.value = code;
+      o.textContent = LANG_LABELS[code] || code;
+      sel.appendChild(o);
+    });
+    sel.addEventListener('change', () => {
+      try { localStorage.setItem('lang', sel.value); } catch (_) {}
+      // Komplettes Neuladen ist hier am einfachsten: HTML-Texte, Würfel-
+      // Glow, Setup-Zone, alles passt danach garantiert zusammen.
+      location.reload();
+    });
+  }
+  if (sel) sel.value = LANG;
+}
+
 // ---------- Los geht's ----------
+applyI18n();
+applyColors();                  // Farbnamen sind sprachabhängig – nach applyI18n neu setzen
 applyWood();
 buildPalettePop();
 buildCube();
@@ -1673,5 +2071,6 @@ layoutTable();
 placeDiceInZone();
 cubeEl.style.transform = qToCss(dice.q);
 applyLighting();
+refreshSoundBtn();              // Sound-Label in aktueller Sprache
 refreshStart();
 requestAnimationFrame(frame);

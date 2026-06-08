@@ -34,6 +34,7 @@
   <button id="mLog" class="btn">📜 Protokoll anzeigen</button>
   <div id="log"></div>
   <button id="mSound" class="btn">🔊 Sound: an</button>
+  <label class="mLang">🌐 <select id="mLang"></select></label>
 </div>
 
 <!-- Spielaufbau: Anleitung + Start-Button leuchten direkt auf dem Holz
@@ -41,12 +42,12 @@
      Pools auf dem Brett gewählt. -->
 <div id="setupZone">
   <div id="setupInner">
-    <h2 class="glowtext">Mensch ärgere<br>Dich nicht</h2>
-    <div class="glowtext info long">
+    <h2 id="setupTitle" class="glowtext">Mensch ärgere<br>Dich nicht</h2>
+    <div id="instrLong" class="glowtext info long">
       Figur antippen –<br>Farbe wählen<br><br>
       Pool antippen –<br>Mensch · Computer · Nicht dabei
     </div>
-    <div class="glowtext info short">
+    <div id="instrShort" class="glowtext info short">
       Figur antippen = Farbe<br>
       Pool antippen = Spielertyp
     </div>
@@ -61,7 +62,7 @@
 <!-- Spielende -->
 <div id="gameover" class="overlay hidden">
   <div class="dialog">
-    <h2>Spiel beendet!</h2>
+    <h2 id="gameOverTitle">Spiel beendet!</h2>
     <div id="ranking"></div>
     <button id="btnAgain" class="btn primary">Nochmal spielen</button>
   </div>
