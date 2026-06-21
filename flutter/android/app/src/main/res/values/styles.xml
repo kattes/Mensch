@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Wird gezeigt, bis Flutter das erste Frame gerendert hat. Holz-Farbe
+         vermeidet weißen Blitz beim App-Start. -->
+    <style name="LaunchTheme" parent="@android:style/Theme.NoTitleBar.Fullscreen">
+        <item name="android:windowBackground">@color/wood</item>
+    </style>
+    <style name="NormalTheme" parent="@android:style/Theme.NoTitleBar.Fullscreen">
+        <item name="android:windowBackground">@color/wood</item>
+    </style>
+</resources>
