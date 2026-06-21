@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'audio.dart';
 import 'dice_canvas.dart';
 
 /// Bindet den nativen OpenGL-ES-Würfel (Kotlin, `android/.../DiceGl.kt`) über
@@ -59,8 +60,16 @@ class _DiceGlNativeState extends State<DiceGlNative> {
   }
 
   Future<dynamic> _onCall(MethodCall call) async {
-    if (call.method == 'settled') {
-      widget.onSettled?.call(call.arguments as int);
+    switch (call.method) {
+      case 'settled':
+        widget.onSettled?.call(call.arguments as int);
+        break;
+      case 'bounce': // Banden-/Tischaufprall des rollenden Würfels
+        GameAudio.instance.impact((call.arguments as num).toDouble());
+        break;
+      case 'edge': // Kantenwechsel beim Abrollen
+        GameAudio.instance.klack((call.arguments as num).toDouble());
+        break;
     }
     return null;
   }

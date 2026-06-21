@@ -5,7 +5,12 @@ import 'package:flutter/services.dart';
 
 import 'game_widget.dart';
 import 'i18n.dart' as i18n;
+import 'sound_lab.dart';
 import 'wood.dart';
+
+/// true zeigt statt des Spiels das Würfel-Sound-Hörlabor (Entwicklungs-Tool
+/// zum Auswählen/Feinabstimmen des Würfelklangs, siehe sound_lab.dart).
+const bool kSoundLab = false;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -53,7 +58,7 @@ class MenschApp extends StatelessWidget {
       ),
       home: Directionality(
         textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
-        child: const GameWidget(),
+        child: kSoundLab ? const SoundLab() : const GameWidget(),
       ),
     );
   }

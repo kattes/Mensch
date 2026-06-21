@@ -82,8 +82,27 @@ class DiceGl(
     private var settleT = 0f
     private var qFrom = idleQ(); private var qTo = idleQ()
     private var value = 1
+    private var lastTop = 1 // zuletzt deutlich oben liegende Seite (Kantenwechsel)
+    private var lastEdgeNanos = 0L
+    private var lastBounceNanos = 0L
     private var animating = false
     private var lastNanos = 0L
+
+    private fun emit(name: String, v: Double) {
+        mainHandler.post { channel.invokeMethod(name, v) }
+    }
+
+    // Aufprall-Sound: schwache Treffer ignorieren und auf max. alle 80 ms
+    // drosseln (wie game.js). Sonst erzeugt der Flummi-artige Auslauf des
+    // Würfels eine Kette leiser Bounces = Knattern.
+    private fun emitBounce(strength: Float) {
+        val s = strength.coerceIn(0f, 1f)
+        if (s < 0.16f) return
+        val now = System.nanoTime()
+        if (now - lastBounceNanos < 80_000_000L) return
+        lastBounceNanos = now
+        emit("bounce", s.toDouble())
+    }
 
     private fun idleQ() = qNorm(qMul(qAxis(1f, 0f, 0f, -0.35f), qAxis(0f, 1f, 0f, 0.5f)))
 
@@ -334,6 +353,7 @@ class DiceGl(
         dvz = 2.4f * unit
         dwz = (Math.random().toFloat() * 2 - 1) * 4f
         state = 1
+        lastTop = topFace(dq)
         startAnimating()
     }
 
@@ -368,10 +388,16 @@ class DiceGl(
             if (dy > texH - h) { dy = texH - h; dvy = -abs(dvy) * R; bounced = true }
 
             val speed = hypot(dvx, dvy)
+            // Bandenkontakt → Aufprall-Sound (Stärke wie game.js: speed/(9u)).
+            if (bounced) emitBounce(speed / (9f * u))
             if (bounced) dvz = max(dvz, min(2.2f * u, speed * 0.25f))
             dz += dvz * dt
             dvz -= 14f * u * dt
-            if (dz < 0) { dz = 0f; dvz = -dvz * 0.42f; if (abs(dvz) < 0.3f * u) dvz = 0f }
+            if (dz < 0) {
+                dz = 0f; dvz = -dvz * 0.42f
+                if (abs(dvz) < 0.3f * u) dvz = 0f
+                else emitBounce(dvz / (3f * u)) // Tischaufprall
+            }
 
             val dec = 3.4f * u * dt
             if (speed > dec) { val ff = (speed - dec) / speed; dvx *= ff; dvy *= ff } else { dvx = 0f; dvy = 0f }
@@ -383,6 +409,19 @@ class DiceGl(
             if (abs(dwz) > 0.05f) {
                 dq = qNorm(qMul(qAxis(0f, 0f, 1f, dwz * dt), dq))
                 dwz *= exp(-1.8f * dt)
+            }
+            // Kantenwechsel → Klack. Hysterese gegen Flackern: nur wenn eine
+            // NEUE Seite DEUTLICH oben liegt (n_z > 0.72) und seit dem letzten
+            // Klack ≥ 45 ms vergangen sind (sonst knattert es beim Balancieren).
+            var bestV = 1; var bestDot = -2f
+            for (v in 1..6) {
+                val nz = qRotate(dq, FACE_NORMALS[v]!!)[2]
+                if (nz > bestDot) { bestDot = nz; bestV = v }
+            }
+            val nowN = System.nanoTime()
+            if (bestV != lastTop && bestDot > 0.72f && nowN - lastEdgeNanos > 45_000_000L) {
+                lastTop = bestV; lastEdgeNanos = nowN
+                emit("edge", (speed / (6f * u)).coerceIn(0.2f, 1f).toDouble())
             }
             if (speed < 0.5f * u && dz <= 0.01f) settleDice()
         } else if (state == 2) {
